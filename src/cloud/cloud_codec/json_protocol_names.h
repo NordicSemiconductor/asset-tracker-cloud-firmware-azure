@@ -48,11 +48,6 @@
 #define DATA_GPS_SPEED		"spd"
 #define DATA_GPS_HEADING	"hdg"
 
-#define OBJECT_CONFIG		"cfg"
-
-#if defined(CONFIG_AWS_IOT)
 #define OBJECT_REPORTED		"reported"
 #define OBJECT_STATE		"state"
-#elif defined(CONFIG_AZURE_IOT_HUB)
-#define OBJECT_DESIRED		"desired"
-#endif
+#define OBJECT_CONFIG		"cfg"

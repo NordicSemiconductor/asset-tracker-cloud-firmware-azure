@@ -7,7 +7,7 @@ nRF9160: Asset Tracker v2
    :local:
    :depth: 2
 
-The Asset Tracker v2 is a real-time configurable ultra-low power capable application firmware for the nRF9160 System in Package (SiP).
+The Asset Tracker v2 is a real-time configurable ultra-low-power capable application firmware for the nRF9160 System in Package (SiP).
 It is a complete rework of the :ref:`asset_tracker` application.
 This application introduces a set of new features, which are not present in the :ref:`asset_tracker` application:
 
@@ -27,15 +27,8 @@ Overview
 ********
 
 The application samples sensor data and publishes the data to a connected cloud service over TCP/IP via LTE.
-As of now, the application supports the following cloud services and the corresponding cloud-side instances.
-
-+------------------+------------------------------------------+
-| Cloud service    | Cloud-side instance                      |
-+==================+==========================================+
-| `AWS IoT Core`_  | `nRF Asset Tracker for AWS`_             |
-+------------------+------------------------------------------+
-| `Azure IoT Hub`_ | `nRF Asset Tracker for Azure`_           |
-+------------------+------------------------------------------+
+As of now, the application supports `AWS IoT Core`_.
+The application is intended to be used with an instance of the `nRF Asset Tracker for AWS`_ running on the cloud side.
 
 Firmware architecture
 =====================
@@ -76,7 +69,7 @@ The application supports the following data types:
 | Battery       | Voltage                    | APP_DATA_BATTERY                              |
 +---------------+----------------------------+-----------------------------------------------+
 
-The sets of sensor data that are published to the cloud service consist of relative timestamps that originate from the time of sampling.
+The sets of sensor data that are published to the cloud service consist of relative `timestamps <Timestamping_>`_ that originate from the time of sampling.
 
 Device modes
 ============
@@ -218,34 +211,22 @@ Setup
 =====
 
 The application is designed to support communication with different cloud services, a single service at a time.
-Currently, the application supports the following services and technologies in the connection:
+Currently, the application supports Amazon Web Services IoT Core cloud service and the following technologies in the cloud connection:
 
-+---------------------+------------------+---------------------------------+
-| Cloud vendor        | Service          | Technologies                    |
-+=====================+==================+=================================+
-| Amazon Web Services | `AWS IoT Core`_  |   `MQTT`_                       |
-|                     |                  +---------------------------------+
-|                     |                  |   `TLS`_                        |
-|                     |                  +---------------------------------+
-|                     |                  |   :ref:`FOTA <nrf9160_ug_fota>` |
-+---------------------+------------------+---------------------------------+
-| Microsoft Azure     | `Azure IoT Hub`_ |   `MQTT`_                       |
-|                     |                  +---------------------------------+
-|                     |                  |   `TLS`_                        |
-|                     |                  +---------------------------------+
-|                     |                  |   :ref:`FOTA <nrf9160_ug_fota>` |
-+---------------------+------------------+---------------------------------+
+* `MQTT <AWS IoT MQTT_>`_
+* `TLS`_
+* :ref:`FOTA <nrf9160_ug_fota>`
 
-Setting up the Asset Tracker Cloud Example
-------------------------------------------
+`Azure support for Asset Tracker v2`_ is currently under implementation.
 
-To set up the application to work with a specific cloud example, see the following documentation:
+Setting up the nRF Asset Tracker for AWS
+----------------------------------------
 
-* AWS IoT Core - `Getting started guide for nRF Asset Tracker for AWS`_
-* Azure IoT Hub - `Getting started guide for nRF Asset Tracker for Azure`_
+The application is compatible with the `nRF Asset Tracker for AWS`_, which is an open source reference implementation of a serverless backend for an IoT product.
+To set up the application to work with the nRF Asset Tracker for AWS, see the `Getting started guide for nRF Asset Tracker for AWS`_.
 
-For every cloud service that is supported by this application, you must configure the corresponding *cloud library* by setting certain mandatory Kconfig options that are specific to the *cloud library*.
-For more information, see :ref:`Cloud-specific mandatory Kconfig options <mandatory_config>`.
+Once you have finished the setup, you must provide the broker hostname to the firmware using the :option:`CONFIG_AWS_IOT_BROKER_HOST_NAME` Kconfig option.
+Configure the secTag using the :option:`CONFIG_AWS_IOT_SEC_TAG` Kconfig option. For example, you can use the default value of ``42`` that is used in the nRF Asset Tracker for AWS .
 
 Configuration options
 =====================
@@ -264,37 +245,22 @@ Check and configure the following configuration options for the application:
 
    This application configuration sets a custom client ID for the respective cloud. For setting a custom client ID, you need to set :option:`CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM` to ``y``.
 
+Additional configuration
+========================
 
-.. _mandatory_config:
+To get the application to communicate with a specified cloud service, configure the Kconfig options specific to each *cloud library*.
+Every cloud service supported in |NCS| has a corresponding *cloud library* that needs to be selected and properly configured.
 
-Mandatory library configuration
-===============================
-
-You can set the mandatory library-specific Kconfig options in the :file:`prj.conf` file of the application.
-
-Configurations for AWS IoT library
-----------------------------------
+You must check and configure the following :ref:`lib_aws_iot` library options that are used by the application:
 
 * :option:`CONFIG_AWS_IOT_BROKER_HOST_NAME`
 * :option:`CONFIG_AWS_IOT_SEC_TAG`
 
-
-Configurations for Azure Iot Hub library
-----------------------------------------
-
-* :option:`CONFIG_AZURE_IOT_HUB_DPS_HOSTNAME`
-* :option:`CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE`
-* :option:`CONFIG_AZURE_IOT_HUB_SEC_TAG`
-* :option:`CONFIG_AZURE_FOTA_SEC_TAG`
-
-Optional library configurations
-===============================
-
-You can add the following *optional* configurations to configure the heap or to provide additional information such as APN to the modem for registering with an LTE network:
+Additionally, you can add the following optional configurations to configure the heap or to provide additional information such as APN to the modem for registering with an LTE network:
 
 * :option:`CONFIG_HEAP_MEM_POOL_SIZE` - Configures the size of the heap that is used by the application when encoding and sending data to the cloud. More information can be found in :ref:`memory_allocation`.
-* :option:`CONFIG_LTE_PDP_CMD` - Used for manual configuration of the APN. Set the option to ``y`` to enable PDP define using ``AT+CGDCONT``.
-* :option:`CONFIG_LTE_PDP_CONTEXT` - Used for manual configuration of the APN. An example is ``0,\"IP\",\"apn.example.com\"``.
+* :option:`CONFIG_PDN_DEFAULTS_OVERRIDE` - Used for manual configuration of the APN. Set the option to ``y`` to override the default PDP context configuration.
+* :option:`CONFIG_PDN_DEFAULT_APN` - Used for manual configuration of the APN. An example is ``apn.example.com``.
 
 Configuration files
 ===================
@@ -397,9 +363,6 @@ This application uses the following |NCS| libraries and drivers:
 
 * :ref:`event_manager`
 * :ref:`lib_aws_iot`
-* :ref:`lib_aws_fota`
-* :ref:`lib_azure_iot_hub`
-* :ref:`lib_azure_fota`
 * :ref:`lib_date_time`
 * :ref:`lte_lc_readme`
 * :ref:`modem_info_readme`
