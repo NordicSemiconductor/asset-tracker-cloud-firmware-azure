@@ -99,6 +99,7 @@ jobs:
         run: |
           APP_VERSION=${{ steps.version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}\"" >> prj.conf
+          echo "CONFIG_AZURE_FOTA_APP_VERSION=\"${APP_VERSION}\"" >> prj.conf
 
       - name: Enable debug logs
         if: matrix.loglevel == 'debug'
@@ -209,6 +210,7 @@ jobs:
           APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${JOB_ID}
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
+          echo "CONFIG_AZURE_FOTA_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
 
       - run: echo "# Firmware CI settings" >> prj.conf
 
@@ -257,6 +259,7 @@ jobs:
       - name: Build with changed version for FOTA test
         run: |
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-upgraded\"" >> prj.conf
+          echo "CONFIG_AZURE_FOTA_APP_VERSION=\"${APP_VERSION}-upgraded\"" >> prj.conf
           docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker_image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf"'
           cp build/zephyr/app_update.bin fota-upgrade.bin
           cp prj.conf fota-upgrade.conf
