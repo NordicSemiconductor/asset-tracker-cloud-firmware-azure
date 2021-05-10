@@ -129,12 +129,6 @@ jobs:
           echo "CONFIG_AGPS_SRC_SUPL=y" >> prj.conf
           echo "CONFIG_FPU=y" >> prj.conf
 
-      - name: Event manager fix
-        run:
-          sed -i
-          's/CONFIG_DESKTOP_EVENT_MANAGER_LOG_EVENT_TYPE/CONFIG_EVENT_MANAGER_LOG_EVENT_TYPE/'
-          prj.conf
-
       - run: cat prj.conf
 
       - name: Enable Azure settings in overlay-debug.conf
@@ -243,12 +237,6 @@ jobs:
       - name: Disable sampling of GPS after connection
         ## so device information is published quicker
         run: CONFIG_APP_REQUEST_GPS_ON_INITIAL_SAMPLING=n >> prj.conf
-
-      - name: Event manager fix
-        run:
-          sed -i
-          's/CONFIG_DESKTOP_EVENT_MANAGER_LOG_EVENT_TYPE/CONFIG_EVENT_MANAGER_LOG_EVENT_TYPE/'
-          prj.conf
 
       - run: cat prj.conf
 
