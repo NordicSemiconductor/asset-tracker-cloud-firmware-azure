@@ -291,6 +291,9 @@ jobs:
       - name: Clone nRF Asset Tracker for Azure
         run: |
           git clone `cat package.json | jq -r '.cloud.repository'` cloud
+          cd cloud
+          npm ci
+          npx tsc
 
       - name: Keep CA certificates around
         uses: actions/cache@v2
