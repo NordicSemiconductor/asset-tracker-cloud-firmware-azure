@@ -197,7 +197,7 @@ jobs:
       - name: Configure Version
         id: configure-version
         run: |
-          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{ steps.device-id.outputs.device_id }}
+          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{ needs.device-id.outputs.device_id }}
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
           echo "::set-output name=app_version::${APP_VERSION}"
@@ -221,7 +221,7 @@ jobs:
         run: |
           echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> prj.conf
           echo "CONFIG_AZURE_IOT_HUB_DEVICE_ID_MAX_LEN=40" >> prj.conf
-          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ steps.device-id.outputs.device_id }}\"" >> prj.conf
+          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ needs.device-id.outputs.device_id }}\"" >> prj.conf
 
       - name: Disable sampling of GPS after connection
         ## so device information is published quicker
@@ -304,12 +304,12 @@ jobs:
       - name: Create device credentials
         run: |
           cd cloud
-          node cli create-device-cert -d ${{ steps.device-id.outputs.device_id }}
+          node cli create-device-cert -d ${{ needs.device-id.outputs.device_id }}
 
       - uses: actions/upload-artifact@v2
         with:
           name:
-            e2e-credentials-${{ steps.device-id.outputs.device_id }}-${{
+            e2e-credentials-${{ needs.device-id.outputs.device_id }}-${{
             matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
           path: |
             ./cloud/certificates/*/device-*
@@ -336,7 +336,7 @@ jobs:
 
       - uses: actions/download-artifact@v2
         name:
-          e2e-credentials-${{ steps.device-id.outputs.device_id }}-${{
+          e2e-credentials-${{ needs.device-id.outputs.device_id }}-${{
           matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
 
       - name: Run firmware on real device
@@ -361,7 +361,7 @@ jobs:
           timeout in minutes: 20
           sec tag: 11
           certificate location:
-            ./e2e-credentials-${{ steps.device-id.outputs.device_id }}-${{
+            ./e2e-credentials-${{ needs.device-id.outputs.device_id }}-${{
             matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
