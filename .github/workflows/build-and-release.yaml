@@ -233,9 +233,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }}
+          name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
           path: |
             cloud/certificates/*/device-${DEVICE_ID}*
 
@@ -261,14 +259,11 @@ jobs:
 
       - uses: actions/download-artifact@v2
         with:
-          name:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }}
+          name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Configure Version
         id: configure-version
@@ -330,9 +325,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name:
-            e2e-firmware-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }}
+          name: e2e-firmware-${{ matrix.board }}-${{ matrix.network }}
           path: |
             firmware.hex
             firmware.conf
@@ -352,19 +345,14 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v2
-        name:
-          e2e-firmware-${{ matrix.board }}-${{ matrix.network }}-${{
-          matrix.loglevel }}
+        name: e2e-firmware-${{ matrix.board }}-${{ matrix.network }}
 
       - uses: actions/download-artifact@v2
-        name:
-          e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-          matrix.loglevel }}
+        name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
@@ -388,8 +376,7 @@ jobs:
           timeout in minutes: 20
           sec tag: 11
           certificate location:
-            ./e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }}
+            ./e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
 
@@ -406,14 +393,11 @@ jobs:
 
     steps:
       - uses: actions/download-artifact@v2
-        name:
-          e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-          matrix.loglevel }}
+        name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            matrix.loglevel }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run feature tests
         uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@saga
