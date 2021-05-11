@@ -254,12 +254,6 @@ jobs:
           cp build/zephyr/app_update.bin fota-upgrade.bin
           cp prj.conf fota-upgrade.conf
 
-      - name: Keep certificates around
-        uses: actions/cache@v2
-        with:
-          path: ./certificates
-          key: certificates-2020-01-20
-
       - uses: actions/upload-artifact@v2
         with:
           name: end-to-end-test-${{ github.sha }}
@@ -268,13 +262,9 @@ jobs:
             firmware.conf
             fota-upgrade.bin
             fota-upgrade.conf
-            certificates/*/device-${device_id}*
             fotaJobDocument.json
             jobDocument.json
             report.json
-
-      - name: Remove device certificates
-        run: rm -v ./certificates/*/device-*
 
   e2e-device:
     name: Run the firmware for the end-to-end tests on a real device
@@ -302,6 +292,12 @@ jobs:
       - uses: actions/download-artifact@v2
         name: end-to-end-test-${{ github.sha }}
 
+      - name: Keep certificates around
+        uses: actions/cache@v2
+        with:
+          path: ./certificates
+          key: certificates
+
       - name: Schedule Firmware CI job
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
         id: schedule
@@ -323,6 +319,10 @@ jobs:
             cloud_module.data_send: Data sent
           timeout in minutes: 20
           sec tag: 11
+          certificate location: ./certificates
+
+      - name: Remove device certificates
+        run: rm -vf ./certificates/*/device-*
 
   e2e-tests:
     name: Run the end-to-end test
