@@ -221,6 +221,7 @@ jobs:
       - name: Create Intermediate CA certificate
         if: env.SKIP_CERT_GENERATION != '1'
         run: |
+          cd cloud  
           node cli create-ca-root
           node cli proof-ca-root-possession
           node cli create-ca-intermediate
