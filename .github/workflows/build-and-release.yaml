@@ -163,25 +163,69 @@ jobs:
             app_update.bin
             prj.conf
 
-  device-id:
-    name: Generate device ID
+  e2e-credentials:
+    name: Create device credentials for end-to-end test
     runs-on: ubuntu-latest
 
-    outputs:
-      device_id: ${{ steps.device-id.outputs.device_id }}
+    strategy:
+      matrix:
+        board: [nrf9160dk_nrf9160ns]
+        network: [ltem]
 
     steps:
       - name: Generate device ID
-        id: device-id
         run: |
-          device_id=`uuidgen`
-          echo "::set-output name=device_id::${{ steps.device-id.outputs.device_id }}"
+          DEVICE_ID=`uuidgen`
+          echo "DEVICE_ID=${DEVICE_ID}" >> $GITHUB_ENV
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: List Azure accounts
+        run: az account list --output table
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "15.x"
+
+      - uses: actions/checkout@v2
+
+      - name: Clone nRF Asset Tracker for Azure
+        run: |
+          git clone `cat package.json | jq -r '.cloud.repository'` cloud
+          cd cloud
+          npm ci
+          npx tsc
+
+      - name: Keep CA certificates around
+        uses: actions/cache@v2
+        with:
+          path: cloud/certificates
+          key: certificates
+
+      - name: Create device credentials
+        run: |
+          cd cloud
+          node cli create-device-cert -d ${DEVICE_ID}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            matrix.loglevel }}
+          path: |
+            cloud/certificates/*/device-${DEVICE_ID}*
+
+      - name: Remove device certificates
+        run: rm -vf ./cloud/certificates/*/device*
 
   e2e-firmware:
     name: Build firmware for end-to-end test
     runs-on: ubuntu-latest
 
-    needs: [device-id, docker]
+    needs: [e2e-credentials, docker]
 
     strategy:
       matrix:
@@ -194,10 +238,21 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - uses: actions/upload-artifact@v2
+        with:
+          name:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            matrix.loglevel }}
+
+      - name: Set device id
+        run: |
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            matrix.loglevel }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+
       - name: Configure Version
         id: configure-version
         run: |
-          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{ needs.device-id.outputs.device_id }}
+          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${DEVICE_ID}
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
           echo "::set-output name=app_version::${APP_VERSION}"
@@ -221,7 +276,7 @@ jobs:
         run: |
           echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> prj.conf
           echo "CONFIG_AZURE_IOT_HUB_DEVICE_ID_MAX_LEN=40" >> prj.conf
-          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ needs.device-id.outputs.device_id }}\"" >> prj.conf
+          echo "CONFIG_CLOUD_CLIENT_ID=\"${DEVICE_ID}\"" >> prj.conf
 
       - name: Disable sampling of GPS after connection
         ## so device information is published quicker
@@ -263,60 +318,6 @@ jobs:
             fota-upgrade.bin
             fota-upgrade.conf
 
-  e2e-credentials:
-    name: Create device credentials for end-to-end test
-    runs-on: ubuntu-latest
-    needs: [device-id]
-
-    strategy:
-      matrix:
-        board: [nrf9160dk_nrf9160ns]
-        network: [ltem]
-
-    steps:
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: List Azure accounts
-        run: az account list --output table
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "15.x"
-
-      - uses: actions/checkout@v2
-
-      - name: Clone nRF Asset Tracker for Azure
-        run: |
-          git clone `cat package.json | jq -r '.cloud.repository'` cloud
-          cd cloud
-          npm ci
-          npx tsc
-
-      - name: Keep CA certificates around
-        uses: actions/cache@v2
-        with:
-          path: ./cloud/certificates
-          key: certificates
-
-      - name: Create device credentials
-        run: |
-          cd cloud
-          node cli create-device-cert -d ${{ needs.device-id.outputs.device_id }}
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name:
-            e2e-credentials-${{ needs.device-id.outputs.device_id }}-${{
-            matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
-          path: |
-            ./cloud/certificates/*/device-*
-
-      - name: Remove device certificates
-        run: rm -vf ./cloud/certificates/*/device-*
-
   e2e-device:
     name: Run the firmware for the end-to-end tests on a real device
     runs-on: [self-hosted, firmware-ci]
@@ -336,14 +337,19 @@ jobs:
 
       - uses: actions/download-artifact@v2
         name:
-          e2e-credentials-${{ needs.device-id.outputs.device_id }}-${{
-          matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
+          e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+          matrix.loglevel }}
+
+      - name: Set device id
+        run: |
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            matrix.loglevel }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
         id: device
         with:
-          device id: ${{ needs.e2e-firmware.outputs.device_id }}
+          device id: ${{ env.DEVICE_ID }}
           app version: ${{ needs.e2e-firmware.outputs.app_version }}
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
@@ -361,8 +367,8 @@ jobs:
           timeout in minutes: 20
           sec tag: 11
           certificate location:
-            ./e2e-credentials-${{ needs.device-id.outputs.device_id }}-${{
-            matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
+            ./e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            matrix.loglevel }}
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
 
@@ -378,12 +384,22 @@ jobs:
         network: [ltem]
 
     steps:
+      - uses: actions/download-artifact@v2
+        name:
+          e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+          matrix.loglevel }}
+
+      - name: Set device id
+        run: |
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            matrix.loglevel }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+
       - name: Run feature tests
         uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@saga
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
         with:
-          device id: ${{ needs.e2e-firmware.outputs.device_id }}
+          device id: ${{ env.DEVICE_ID }}
           app version: ${{ needs.e2e-firmware.outputs.app_version }}
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
