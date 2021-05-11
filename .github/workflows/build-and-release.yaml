@@ -32,8 +32,6 @@ jobs:
   docker:
     name: Prepare Docker image
     runs-on: ubuntu-latest
-    environment:
-      name: production
     outputs:
       docker_image: ${{ steps.docker-image-tag.outputs.docker_image }}
     steps:
@@ -78,9 +76,6 @@ jobs:
     runs-on: ubuntu-latest
 
     needs: [docker]
-
-    environment:
-      name: production
 
     strategy:
       matrix:
@@ -168,14 +163,25 @@ jobs:
             app_update.bin
             prj.conf
 
-  e2e-prepare:
-    name: Prepare resource for end-to-end test
+  device-id:
+    name: Generate device ID
     runs-on: ubuntu-latest
 
-    environment:
-      name: production
+    outputs:
+      device_id: ${{ steps.device-id.outputs.device_id }}
 
-    needs: [docker]
+    steps:
+      - name: Generate device ID
+        id: device-id
+        run: |
+          device_id=`uuidgen`
+          echo "::set-output name=device_id::${{ steps.device-id.outputs.device_id }}"
+
+  e2e-firmware:
+    name: Build firmware for end-to-end test
+    runs-on: ubuntu-latest
+
+    needs: [device-id, docker]
 
     strategy:
       matrix:
@@ -183,23 +189,15 @@ jobs:
         network: [ltem]
 
     outputs:
-      device_id: ${{ steps.device-id.outputs.device_id }}
       app_version: ${{ steps.configure-version.outputs.app_version }}
 
     steps:
       - uses: actions/checkout@v2
 
-      - name: Generate device ID
-        id: device-id
-        run: |
-          device_id=`uuidgen`
-          echo "device_id=${device_id}" >> $GITHUB_ENV
-          echo "::set-output name=device_id::${device_id}"
-
       - name: Configure Version
         id: configure-version
         run: |
-          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${device_id}
+          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{ steps.device-id.outputs.device_id }}
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
           echo "::set-output name=app_version::${APP_VERSION}"
@@ -223,7 +221,7 @@ jobs:
         run: |
           echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> prj.conf
           echo "CONFIG_AZURE_IOT_HUB_DEVICE_ID_MAX_LEN=40" >> prj.conf
-          echo "CONFIG_CLOUD_CLIENT_ID=\"${device_id}\"" >> prj.conf
+          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ steps.device-id.outputs.device_id }}\"" >> prj.conf
 
       - name: Disable sampling of GPS after connection
         ## so device information is published quicker
@@ -256,54 +254,79 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: end-to-end-test-${{ github.sha }}
+          name: e2e-firmware-${{ github.sha }}
           path: |
             firmware.hex
             firmware.conf
             fota-upgrade.bin
             fota-upgrade.conf
-            fotaJobDocument.json
-            jobDocument.json
-            report.json
+
+  e2e-credentials:
+    name: Create device credentials for end-to-end test
+    runs-on: ubuntu-latest
+    needs: [device-id]
+
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: List Azure accounts
+        run: az account list --output table
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "15.x"
+
+      - name: Clone nRF Asset Tracker for Azure
+        run: |
+          git clone `cat package.json | jq -r '.cloud.repository'` cloud
+
+      - name: Keep CA certificates around
+        uses: actions/cache@v2
+        with:
+          path: ./cloud/certificates
+          key: certificates
+
+      - name: Create device credentials
+        run: |
+          cd cloud
+          node cli create-device-cert -d ${{ steps.device-id.outputs.device_id }}
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: e2e-credentials-${{ steps.device-id.outputs.device_id }}
+          path: |
+            ./cloud/certificates/*/device-*
+
+      - name: Remove device certificates
+        run: rm -vf ./cloud/certificates/*/device-*
 
   e2e-device:
     name: Run the firmware for the end-to-end tests on a real device
     runs-on: [self-hosted, firmware-ci]
 
-    environment:
-      name: production
-
-    needs: [e2e-prepare]
+    needs: [e2e-firmware, e2e-credentials]
 
     strategy:
       matrix:
         board: [nrf9160dk_nrf9160ns]
         network: [ltem]
 
-    env:
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      LOCATION: ${{ secrets.LOCATION }}
-      APP_NAME: ${{ secrets.APP_NAME }}
-      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-      CI: 1
-      FORCE_COLOR: 3
-
     steps:
       - uses: actions/download-artifact@v2
-        name: end-to-end-test-${{ github.sha }}
+        name: e2e-firmware-${{ github.sha }}
 
-      - name: Keep certificates around
-        uses: actions/cache@v2
-        with:
-          path: ./certificates
-          key: certificates
+      - uses: actions/download-artifact@v2
+        name: e2e-credentials-${{ steps.device-id.outputs.device_id }}
 
-      - name: Schedule Firmware CI job
+      - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
-        id: schedule
+        id: device
         with:
-          device id: ${{ needs.e2e-prepare.outputs.device_id }}
-          app version: ${{ needs.e2e-prepare.outputs.app_version }}
+          device id: ${{ needs.e2e-firmware.outputs.device_id }}
+          app version: ${{ needs.e2e-firmware.outputs.app_version }}
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
@@ -313,38 +336,25 @@ jobs:
           abort on: |
             azure_fota: Error (-7) when trying to start firmware download
           end on: |
-            azure_iot_hub_integration.cloud_wrap_init:  Version:     ${{ needs.e2e-prepare.outputs.app_version }}-upgraded
+            azure_iot_hub_integration.cloud_wrap_init:  Version:     ${{ needs.e2e-firmware.outputs.app_version }}-upgraded
             "appV"
-            "${{ needs.e2e-prepare.outputs.app_version }}-upgraded"
+            "${{ needs.e2e-firmware.outputs.app_version }}-upgraded"
             cloud_module.data_send: Data sent
           timeout in minutes: 20
           sec tag: 11
-          certificate location: ./certificates
-
-      - name: Remove device certificates
-        run: rm -vf ./certificates/*/device-*
+          certificate location:
+            ./e2e-credentials-${{ steps.device-id.outputs.device_id }}
 
   e2e-tests:
     name: Run the end-to-end test
     runs-on: ubuntu-latest
 
-    environment:
-      name: production
-
-    needs: [e2e-prepare, e2e-device]
+    needs: [e2e-firmware, e2e-device]
 
     strategy:
       matrix:
         board: [nrf9160dk_nrf9160ns]
         network: [ltem]
-
-    env:
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      LOCATION: ${{ secrets.LOCATION }}
-      APP_NAME: ${{ secrets.APP_NAME }}
-      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-      CI: 1
-      FORCE_COLOR: 3
 
     steps:
       - name: Run feature tests
@@ -352,8 +362,8 @@ jobs:
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
         with:
-          device id: ${{ needs.e2e-prepare.outputs.device_id }}
-          app version: ${{ needs.e2e-prepare.outputs.app_version }}
+          device id: ${{ needs.e2e-firmware.outputs.device_id }}
+          app version: ${{ needs.e2e-firmware.outputs.app_version }}
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
@@ -363,7 +373,7 @@ jobs:
       - name: Remove test device
         # If the device did not connect, no Thing will have been created
         if:
-          steps.schedule.outputs.connected == 'true' &&
+          steps.device.outputs.connected == 'true' &&
           !contains(toJSON(github.event.commits.*.message), '[skip-cleanup]')
         run: |
           echo "Not implemented"
