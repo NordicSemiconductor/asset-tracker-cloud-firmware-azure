@@ -231,11 +231,16 @@ jobs:
           cd cloud
           node cli create-device-cert -d ${DEVICE_ID}
 
+      - name: Copy credentials
+        run: |
+          mkdir e2e-credentials
+          cp cloud/certificates/*/device-${{ env.DEVICE_ID }}* e2e-credentials
+
       - uses: actions/upload-artifact@v2
         with:
           name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
           path: |
-            cloud/certificates/*/device-${{ env.DEVICE_ID }}*
+            e2e-credentials/*
 
       - name: Remove device certificates
         run: rm -vf ./cloud/certificates/*/device*
@@ -263,7 +268,7 @@ jobs:
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Configure Version
         id: configure-version
@@ -352,7 +357,7 @@ jobs:
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
@@ -375,8 +380,7 @@ jobs:
             cloud_module.data_send: Data sent
           timeout in minutes: 20
           sec tag: 11
-          certificate location:
-            ./e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
+          certificate location: ./e2e-credentials
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
 
@@ -397,7 +401,7 @@ jobs:
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run feature tests
         uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@saga
