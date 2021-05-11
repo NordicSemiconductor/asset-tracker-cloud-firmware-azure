@@ -306,6 +306,12 @@ jobs:
 
       - run: cat prj.conf
 
+      - name: Enable Azure settings in overlay-debug.conf
+        run: |
+          cat overlay-debug.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.overlay-debug.conf
+          mv azure.overlay-debug.conf overlay-debug.conf
+          cat overlay-debug.conf
+
       - name: Login to GHCR
         uses: docker/login-action@v1
         with:
