@@ -235,7 +235,7 @@ jobs:
         with:
           name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
           path: |
-            cloud/certificates/*/device-${DEVICE_ID}*
+            cloud/certificates/*/device-${{ env.DEVICE_ID }}*
 
       - name: Remove device certificates
         run: rm -vf ./cloud/certificates/*/device*
