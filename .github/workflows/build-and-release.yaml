@@ -195,8 +195,15 @@ jobs:
       - name: Clone nRF Asset Tracker for Azure
         run: |
           git clone `cat package.json | jq -r '.cloud.repository'` cloud
+
+      - name: Install dependencies
+        run: |
           cd cloud
           npm ci
+
+      - name: Compile TypeScript
+        run: |
+          cd cloud
           npx tsc
 
       - name: Keep CA certificates around
@@ -204,6 +211,19 @@ jobs:
         with:
           path: cloud/certificates
           key: certificates
+
+      - name: Check if intermediate cert exists
+        run: |
+          ls ./cloud/certificates/*/CA.intermediate.* 1> /dev/null 2>&1
+          echo "SKIP_CERT_GENERATION=1" >> $GITHUB_ENV
+        continue-on-error: true
+
+      - name: Create Intermediate CA certificate
+        if: env.SKIP_CERT_GENERATION != '1'
+        run: |
+          node cli create-ca-root
+          node cli proof-ca-root-possession
+          node cli create-ca-intermediate
 
       - name: Create device credentials
         run: |
