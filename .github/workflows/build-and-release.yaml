@@ -286,6 +286,8 @@ jobs:
         with:
           node-version: "15.x"
 
+      - uses: actions/checkout@v2
+
       - name: Clone nRF Asset Tracker for Azure
         run: |
           git clone `cat package.json | jq -r '.cloud.repository'` cloud
