@@ -297,7 +297,6 @@ jobs:
       - name: Set MQTT client ID to test device
         run: |
           echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> prj.conf
-          echo "CONFIG_AZURE_IOT_HUB_DEVICE_ID_MAX_LEN=40" >> prj.conf
           echo "CONFIG_CLOUD_CLIENT_ID=\"${DEVICE_ID}\"" >> prj.conf
 
       - name: Disable sampling of GPS after connection
