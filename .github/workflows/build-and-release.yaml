@@ -382,7 +382,6 @@ jobs:
           fota file: fota-upgrade.bin
           abort on: |
             azure_fota: Error (-7) when trying to start firmware download
-            azure_iot_hub: Connection was rejected with return code 5
             azure_iot_integration: azure_iot_hub_init, error
           end on: |
             azure_iot_hub_integration.cloud_wrap_init:  Version:     ${{ needs.e2e-firmware.outputs.app_version }}-upgraded
