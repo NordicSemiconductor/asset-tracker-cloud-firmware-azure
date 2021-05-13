@@ -236,6 +236,9 @@ Currently, the application supports the following services and technologies in t
 |                     |                  |   :ref:`FOTA <nrf9160_ug_fota>` |
 +---------------------+------------------+---------------------------------+
 
+.. note::
+   The Azure FOTA process is expected to change during the coming months depending on the new `Azure Device Update for IoT Hub`_ that is in currently in preview.
+
 Setting up the Asset Tracker Cloud Example
 ------------------------------------------
 
