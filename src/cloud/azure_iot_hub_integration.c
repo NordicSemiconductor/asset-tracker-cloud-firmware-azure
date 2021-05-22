@@ -1,33 +1,31 @@
-#include "cloud/cloud_wrapper.h"
 #include <zephyr.h>
 #include <net/azure_iot_hub.h>
 #include <modem/at_cmd.h>
 
-#define MODULE azure_iot_integration
+#include "cloud/cloud_wrapper.h"
+
+#define MODULE azure_iot_hub_integration
 
 #include <logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_CLOUD_INTEGRATION_LOG_LEVEL);
 
 #if !defined(CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM)
-#define AZURE_IOT_HUB_CLIENT_ID_LEN 15
+#define CLIENT_ID_LEN 15
 #else
-#define AZURE_IOT_HUB_CLIENT_ID_LEN (sizeof(CONFIG_CLOUD_CLIENT_ID) - 1)
+#define CLIENT_ID_LEN (sizeof(CONFIG_CLOUD_CLIENT_ID) - 1)
 #endif
 
 #define PROP_BAG_COUNT 1
-#define AZURE_IOT_PROP_BAG_BATCH "batch"
+#define PROP_BAG_BATCH "batch"
 
 #define REQUEST_DEVICE_TWIN_STRING ""
 
 static struct azure_iot_hub_prop_bag prop_bag_batch[PROP_BAG_COUNT] = {
-		[0].key = AZURE_IOT_PROP_BAG_BATCH,
+		[0].key = PROP_BAG_BATCH,
 		[0].value = NULL
 };
-
-static char client_id_buf[AZURE_IOT_HUB_CLIENT_ID_LEN + 1];
-
+static char client_id_buf[CLIENT_ID_LEN + 1];
 static struct azure_iot_hub_config config;
-
 static cloud_wrap_evt_handler_t wrapper_evt_handler;
 
 static void cloud_wrapper_notify_event(const struct cloud_wrap_event *evt)
@@ -167,18 +165,17 @@ int cloud_wrap_init(cloud_wrap_evt_handler_t event_handler)
 	}
 
 	/* Set null character at the end of the device IMEI. */
-	imei_buf[AZURE_IOT_HUB_CLIENT_ID_LEN] = 0;
+	imei_buf[CLIENT_ID_LEN] = 0;
 
-	strncpy(client_id_buf, imei_buf, sizeof(client_id_buf) - 1);
+	snprintk(client_id_buf, sizeof(client_id_buf), "%s", imei_buf);
 
 #else
-	snprintf(client_id_buf, sizeof(client_id_buf), "%s",
-		 CONFIG_CLOUD_CLIENT_ID);
+	snprintk(client_id_buf, sizeof(client_id_buf), "%s", CONFIG_CLOUD_CLIENT_ID);
 #endif
 
 	/* Fetch IMEI from modem data and set IMEI as cloud connection ID */
 	config.device_id = client_id_buf;
-	config.device_id_len = sizeof(client_id_buf);
+	config.device_id_len = strlen(client_id_buf);
 
 	err = azure_iot_hub_init(&config, azure_iot_hub_event_handler);
 	if (err) {
@@ -188,11 +185,11 @@ int cloud_wrap_init(cloud_wrap_evt_handler_t event_handler)
 
 	LOG_DBG("********************************************");
 	LOG_DBG(" The Asset Tracker v2 has started");
-	LOG_DBG(" Version:     %s", CONFIG_ASSET_TRACKER_V2_APP_VERSION);
-	LOG_DBG(" Client ID:   %s", log_strdup(client_id_buf));
-	LOG_DBG(" Cloud:       %s", "Azure IoT Hub");
-	LOG_DBG(" Endpoint:    %s", CONFIG_AZURE_IOT_HUB_DPS_HOSTNAME);
-	LOG_DBG(" ID scope:    %s", CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE);
+	LOG_DBG(" Version:      %s", CONFIG_ASSET_TRACKER_V2_APP_VERSION);
+	LOG_DBG(" Client ID:    %s", log_strdup(client_id_buf));
+	LOG_DBG(" Cloud:        %s", "Azure IoT Hub");
+	LOG_DBG(" DPS endpoint: %s", CONFIG_AZURE_IOT_HUB_DPS_HOSTNAME);
+	LOG_DBG(" ID scope:     %s", CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE);
 	LOG_DBG("********************************************");
 
 	wrapper_evt_handler = event_handler;
@@ -229,7 +226,6 @@ int cloud_wrap_disconnect(void)
 int cloud_wrap_state_get(void)
 {
 	int err;
-
 	struct azure_iot_hub_data msg = {
 		.ptr = REQUEST_DEVICE_TWIN_STRING,
 		.len = sizeof(REQUEST_DEVICE_TWIN_STRING) - 1,
@@ -249,7 +245,6 @@ int cloud_wrap_state_get(void)
 int cloud_wrap_state_send(char *buf, size_t len)
 {
 	int err;
-
 	struct azure_iot_hub_data msg = {
 		.ptr = buf,
 		.len = len,
@@ -269,7 +264,6 @@ int cloud_wrap_state_send(char *buf, size_t len)
 int cloud_wrap_data_send(char *buf, size_t len)
 {
 	int err;
-
 	struct azure_iot_hub_data msg = {
 		.ptr = buf,
 		.len = len,
@@ -289,7 +283,6 @@ int cloud_wrap_data_send(char *buf, size_t len)
 int cloud_wrap_batch_send(char *buf, size_t len)
 {
 	int err;
-
 	struct azure_iot_hub_data msg = {
 		.ptr = buf,
 		.len = len,
@@ -311,7 +304,6 @@ int cloud_wrap_batch_send(char *buf, size_t len)
 int cloud_wrap_ui_send(char *buf, size_t len)
 {
 	int err;
-
 	struct azure_iot_hub_data msg = {
 		.ptr = buf,
 		.len = len,

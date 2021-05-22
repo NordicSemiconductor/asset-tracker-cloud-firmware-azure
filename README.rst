@@ -285,7 +285,6 @@ Configurations for AWS IoT library
 Configurations for Azure Iot Hub library
 ----------------------------------------
 
-* :option:`CONFIG_AZURE_IOT_HUB_DPS_HOSTNAME`
 * :option:`CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE`
 * :option:`CONFIG_AZURE_IOT_HUB_SEC_TAG`
 * :option:`CONFIG_AZURE_FOTA_SEC_TAG`

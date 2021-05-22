@@ -11,8 +11,8 @@
 #include <zephyr/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cJSON.h>
 
-#include "cJSON.h"
 #include "json_helpers.h"
 #include "json_common.h"
 #include "json_protocol_names.h"
