@@ -155,7 +155,7 @@ Newly sampled data is always published prior to the old, buffered data.
 The application has LTE and cloud connection awareness.
 Upon a disconnect from the cloud service, the application keeps the sensor data that has been buffered and empty the buffers in batch messages when the application reconnects to the cloud service.
 
-User Interface
+User interface
 **************
 
 The application uses the following buttons on the nRF9160-based development kits:
@@ -237,9 +237,9 @@ Currently, the application supports the following services and technologies in t
 +---------------------+------------------+---------------------------------+
 
 .. note::
-   The Azure FOTA process is expected to change during the coming months depending on the new `Azure Device Update for IoT Hub`_ that is in currently in preview.
+   The Azure FOTA process is expected to change in the near future depending on the new `Azure Device Update for IoT Hub`_ that is currently in preview.
 
-Setting up the Asset Tracker Cloud Example
+Setting up the Asset Tracker cloud example
 ------------------------------------------
 
 To set up the application to work with a specific cloud example, see the following documentation:
@@ -247,7 +247,7 @@ To set up the application to work with a specific cloud example, see the followi
 * AWS IoT Core - `Getting started guide for nRF Asset Tracker for AWS`_
 * Azure IoT Hub - `Getting started guide for nRF Asset Tracker for Azure`_
 
-For every cloud service that is supported by this application, you must configure the corresponding *cloud library* by setting certain mandatory Kconfig options that are specific to the *cloud library*.
+For every cloud service that is supported by this application, you must configure the corresponding *cloud library* by setting certain mandatory Kconfig options that are specific to the cloud library.
 For more information, see :ref:`Cloud-specific mandatory Kconfig options <mandatory_config>`.
 
 Configuration options
@@ -292,7 +292,7 @@ Configurations for Azure Iot Hub library
 Optional library configurations
 ===============================
 
-You can add the following *optional* configurations to configure the heap or to provide additional information such as APN to the modem for registering with an LTE network:
+You can add the following optional configurations to configure the heap or to provide additional information such as APN to the modem for registering with an LTE network:
 
 * :option:`CONFIG_HEAP_MEM_POOL_SIZE` - Configures the size of the heap that is used by the application when encoding and sending data to the cloud. More information can be found in :ref:`memory_allocation`.
 * :option:`CONFIG_PDN_DEFAULTS_OVERRIDE` - Used for manual configuration of the APN. Set the option to ``y`` to override the default PDP context configuration.
