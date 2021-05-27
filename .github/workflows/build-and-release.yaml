@@ -19,6 +19,14 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   CR_PAT: ${{ secrets.CR_PAT }}
+  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+  LOCATION: ${{ secrets.LOCATION }}
+  APP_NAME: ${{ secrets.APP_NAME }}
+  RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+  AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
+  SUPL_CLIENT_LIB_DOWNLOAD: ${{ secrets.SUPL_CLIENT_LIB_DOWNLOAD }}
+  CI: 1
+  FORCE_COLOR: 3
 
 jobs:
   docker:
@@ -28,8 +36,6 @@ jobs:
       name: production
     outputs:
       docker_image: ${{ steps.docker-image-tag.outputs.docker_image }}
-    env:
-      SUPL_CLIENT_LIB_DOWNLOAD: ${{ secrets.SUPL_CLIENT_LIB_DOWNLOAD }}
     steps:
       - uses: actions/checkout@v2
 
@@ -82,9 +88,6 @@ jobs:
         network: [nbiot, ltem]
         loglevel: [debug, nodebug]
 
-    env:
-      SUPL_CLIENT_LIB_DOWNLOAD: ${{ secrets.SUPL_CLIENT_LIB_DOWNLOAD }}
-
     steps:
       - uses: actions/checkout@v2
 
@@ -111,13 +114,9 @@ jobs:
           echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=y" >> prj.conf
 
       - name: Configure the Azure IoT DPS hostname
-        env:
-          AZURE_IOT_HUB_DPS_HOSTNAME: ${{ secrets.AZURE_IOT_HUB_DPS_HOSTNAME }}
-          AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
         run: |
           cat prj.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.prj.conf
           mv azure.prj.conf prj.conf
-          echo "CONFIG_AZURE_IOT_HUB_DPS_HOSTNAME=\"${AZURE_IOT_HUB_DPS_HOSTNAME}\"" >> prj.conf
           echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"" >> prj.conf
 
       - name: Enable SUPL client
@@ -185,17 +184,6 @@ jobs:
         board: [nrf9160dk_nrf9160ns]
         network: [ltem]
 
-    env:
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-      LOCATION: ${{ secrets.LOCATION }}
-      APP_NAME: ${{ secrets.APP_NAME }}
-      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
-      DEVICE_ID: ${{ secrets.DEVICE_ID }}
-      AZURE_IOT_HUB_DPS_HOSTNAME: ${{ secrets.AZURE_IOT_HUB_DPS_HOSTNAME }}
-      AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
-      CI: 1
-      FORCE_COLOR: 3
-
     steps:
       - uses: actions/checkout@v2
 
@@ -223,7 +211,6 @@ jobs:
         run: |
           cat prj.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.prj.conf
           mv azure.prj.conf prj.conf
-          echo "CONFIG_AZURE_IOT_HUB_DPS_HOSTNAME=\"${AZURE_IOT_HUB_DPS_HOSTNAME}\"" >> prj.conf
           echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"" >> prj.conf
 
       - name: Set MQTT client ID to test device
