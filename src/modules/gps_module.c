@@ -54,7 +54,7 @@ static const struct device *gps_dev;
 
 /* nRF9160 GPS driver configuration. */
 static struct gps_config gps_cfg = {
-	.nav_mode = GPS_NAV_MODE_PERIODIC,
+	.nav_mode = GPS_NAV_MODE_SINGLE_FIX,
 	.power_mode = GPS_POWER_MODE_DISABLED,
 	.interval = GPS_INTERVAL_MAX
 };
@@ -68,7 +68,7 @@ static struct module_data self = {
 /* Forward declarations. */
 static void message_handler(struct gps_msg_data *data);
 static void search_start(void);
-static void search_stop(void);
+static void inactive_send(void);
 static void time_set(struct gps_pvt *gps_data);
 static void data_send(struct gps_pvt *gps_data);
 
@@ -181,7 +181,9 @@ static void gps_event_handler(const struct device *dev, struct gps_event *evt)
 	case GPS_EVT_SEARCH_TIMEOUT:
 		LOG_DBG("GPS_EVT_SEARCH_TIMEOUT");
 		SEND_EVENT(gps, GPS_EVT_TIMEOUT);
-		search_stop();
+
+		/* Wrap sending of GPS_EVT_INACTIVE to avoid macro redefinition errors. */
+		inactive_send();
 		break;
 	case GPS_EVT_PVT:
 		/* Don't spam logs */
@@ -190,7 +192,7 @@ static void gps_event_handler(const struct device *dev, struct gps_event *evt)
 		LOG_DBG("GPS_EVT_PVT_FIX");
 		time_set(&evt->pvt);
 		data_send(&evt->pvt);
-		search_stop();
+		inactive_send();
 		break;
 	case GPS_EVT_NMEA:
 		/* Don't spam logs */
@@ -251,16 +253,8 @@ static void search_start(void)
 	SEND_EVENT(gps, GPS_EVT_ACTIVE);
 }
 
-static void search_stop(void)
+static void inactive_send(void)
 {
-	int err;
-
-	err = gps_stop(gps_dev);
-	if (err) {
-		LOG_WRN("Failed to stop GPS, error: %d", err);
-		return;
-	}
-
 	SEND_EVENT(gps, GPS_EVT_INACTIVE);
 }
 
