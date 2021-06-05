@@ -22,10 +22,7 @@
 #include <logging/log.h>
 LOG_MODULE_REGISTER(MODULE, CONFIG_GPS_MODULE_LOG_LEVEL);
 
-/* Maximum GPS interval value. Dummy value, will not be used. Starting
- * and stopping of GPS is done by the application.
- */
-#define GPS_INTERVAL_MAX 1800
+#define GPS_TIMEOUT_DEFAULT 60
 
 struct gps_msg_data {
 	union {
@@ -56,7 +53,8 @@ static const struct device *gps_dev;
 static struct gps_config gps_cfg = {
 	.nav_mode = GPS_NAV_MODE_SINGLE_FIX,
 	.power_mode = GPS_POWER_MODE_DISABLED,
-	.interval = GPS_INTERVAL_MAX
+	.interval = 0,
+	.timeout = GPS_TIMEOUT_DEFAULT
 };
 
 static struct module_data self = {
