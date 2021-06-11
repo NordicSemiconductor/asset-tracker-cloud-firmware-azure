@@ -111,7 +111,8 @@ jobs:
       - name: Set network mode to NB-IoT
         if: matrix.network == 'nbiot'
         run: |
-          sed -i s/CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y/CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=n/ prj.conf
+          echo "# Set network mode to NB-IoT" >> prj.conf
+          echo "CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=n" >> prj.conf
           echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=y" >> prj.conf
 
       - name: Configure the Azure IoT DPS hostname
@@ -290,7 +291,9 @@ jobs:
 
       - name: Set network mode to LTE-m
         run: |
-          sed -i s/CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=y/CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y/ prj.conf
+          echo "# Set network mode to NB-IoT" >> prj.conf
+          echo "CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=n" >> prj.conf
+          echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=y" >> prj.conf
 
       - name: Configure the Azure IoT DPS hostname
         run: |
