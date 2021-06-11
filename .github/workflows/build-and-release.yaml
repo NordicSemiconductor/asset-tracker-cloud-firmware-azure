@@ -349,6 +349,9 @@ jobs:
 
     needs: [e2e-firmware, e2e-credentials]
 
+    outputs:
+      connected: ${{ steps.device.outputs.connected }}
+
     strategy:
       matrix:
         board: [nrf9160dk_nrf9160ns]
@@ -408,6 +411,8 @@ jobs:
 
     needs: [e2e-firmware, e2e-device]
 
+    if: needs.e2e-device.outputs.connected == 'true'
+
     strategy:
       matrix:
         board: [nrf9160dk_nrf9160ns]
@@ -441,8 +446,8 @@ jobs:
       - name: Remove test device
         # If the device did not connect, no Thing will have been created
         if:
-          steps.device.outputs.connected == 'true' &&
-          !contains(toJSON(github.event.commits.*.message), '[skip-cleanup]')
+          ${{ !contains(toJSON(github.event.commits.*.message) ,
+          '[skip-cleanup]') }}
         run: |
           echo "Not implemented"
 
