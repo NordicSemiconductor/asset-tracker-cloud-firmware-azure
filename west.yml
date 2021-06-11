@@ -3,13 +3,11 @@ manifest:
   remotes:
     - name: nordic
       url-base: https://github.com/nrfconnect
-    - name: simensrostad
-      url-base: https://github.com/simensrostad
   projects:
-    - name: fw-nrfconnect-nrf
+    - name: skd-nrf
       path: nrf
-      remote: simensrostad
-      revision: add_azure_support_asset_tracker_v2
+      remote: nordic
+      revision: master
       import: true
   self:
     path: firmware
