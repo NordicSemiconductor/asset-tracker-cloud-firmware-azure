@@ -93,6 +93,12 @@ jobs:
           branch: saga
           defaultVersion: "0.0.0-development"
 
+      - name: Configure asset_tracker_v2 for Azure
+        run: |
+          pip3 install yq
+          yq -r '.tests["applications.asset_tracker_v2.azure"].extra_configs[]' \
+            sample.yaml >> prj.conf
+
       - name: Configure Version
         run: |
           APP_VERSION=${{ steps.version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
@@ -123,12 +129,6 @@ jobs:
           echo "CONFIG_FPU=y" >> prj.conf
 
       - run: cat prj.conf
-
-      - name: Enable Azure settings in overlay-debug.conf
-        run: |
-          cat overlay-debug.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.overlay-debug.conf
-          mv azure.overlay-debug.conf overlay-debug.conf
-          cat overlay-debug.conf
 
       - name: Login to GHCR
         uses: docker/login-action@v1
@@ -271,6 +271,12 @@ jobs:
         run: |
           echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
+      - name: Configure asset_tracker_v2 for Azure
+        run: |
+          pip3 install yq
+          yq -r '.tests["applications.asset_tracker_v2.azure"].extra_configs[]' \
+            sample.yaml >> prj.conf
+
       - name: Configure Version
         id: configure-version
         run: |
@@ -278,8 +284,6 @@ jobs:
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
           echo "::set-output name=app_version::${APP_VERSION}"
-
-      - run: echo "# Firmware CI settings" >> prj.conf
 
       - name: Enable debug logs
         run: echo "CONFIG_LOG_MAX_LEVEL=4" >> prj.conf
@@ -304,12 +308,6 @@ jobs:
         run: CONFIG_APP_REQUEST_GPS_ON_INITIAL_SAMPLING=n >> prj.conf
 
       - run: cat prj.conf
-
-      - name: Enable Azure settings in overlay-debug.conf
-        run: |
-          cat overlay-debug.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.overlay-debug.conf
-          mv azure.overlay-debug.conf overlay-debug.conf
-          cat overlay-debug.conf
 
       - name: Login to GHCR
         uses: docker/login-action@v1
