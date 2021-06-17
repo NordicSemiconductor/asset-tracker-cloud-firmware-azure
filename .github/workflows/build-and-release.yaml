@@ -29,11 +29,26 @@ env:
   FORCE_COLOR: 3
 
 jobs:
+  # This generates a unique build id (which is also different for re-runs) to
+  # be used in the artifact names to be able to distinguish them when
+  # downloading the artifact files.
+  build-id:
+    name: Generate build ID
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.id.outputs.id }}
+    steps:
+      - name: Generate build ID
+        id: id
+        run: |
+          ID=`uuidgen`
+          echo "::set-output name=id::${ID}"
+
   docker:
     name: Prepare Docker image
     runs-on: ubuntu-latest
     outputs:
-      docker_image: ${{ steps.docker-image-tag.outputs.docker_image }}
+      docker-image: ${{ steps.docker-image-tag.outputs.docker-image }}
     steps:
       - uses: actions/checkout@v2
 
@@ -52,7 +67,7 @@ jobs:
           echo $SUPL_CLIENT_LIB_DOWNLOAD >> .docker-checksum
           DOCKER_CHECKSUM=`sha256sum .docker-checksum | awk '{ print $1 }' | tr -d '\n'`
           DOCKER_IMAGE=ghcr.io/${DOCKER_REPO_NAME}-builder:${DOCKER_CHECKSUM}
-          echo "::set-output name=docker_image::${DOCKER_IMAGE}"
+          echo "::set-output name=docker-image::${DOCKER_IMAGE}"
           echo "DOCKER_IMAGE=${DOCKER_IMAGE}" >> $GITHUB_ENV
 
       - name: Check if Docker image exists
@@ -72,16 +87,13 @@ jobs:
           tags: ${{ env.DOCKER_IMAGE }}
           push: true
 
-  build:
+  release-version:
+    name: Determine next release version
+
     runs-on: ubuntu-latest
 
-    needs: [docker]
-
-    strategy:
-      matrix:
-        board: [thingy91_nrf9160ns, nrf9160dk_nrf9160ns]
-        network: [nbiot, ltem]
-        loglevel: [debug, nodebug]
+    outputs:
+      nextRelease: ${{ steps.version.outputs.nextRelease }}
 
     steps:
       - uses: actions/checkout@v2
@@ -93,40 +105,53 @@ jobs:
           branch: saga
           defaultVersion: "0.0.0-development"
 
+      - run: echo ${{ steps.version.outputs.nextRelease }}
+
+  build:
+    runs-on: ubuntu-latest
+
+    needs: [docker, release-version]
+
+    strategy:
+      matrix:
+        board: [thingy91_nrf9160ns, nrf9160dk_nrf9160ns]
+        network: [nbiot, ltem]
+        loglevel: [debug, nodebug]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Disable nRF Connect for Cloud backend
+        run: |
+          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' prj.conf
+          sed -i 's/CONFIG_AGPS_SRC_NRF_CLOUD=/# CONFIG_AGPS_SRC_NRF_CLOUD=/' prj.conf
+          sed -i 's/CONFIG_GPS_MODULE_NMEA=/# CONFIG_GPS_MODULE_NMEA=/' prj.conf
+          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' overlay-debug.conf
+
       - name: Configure asset_tracker_v2 for Azure
         run: |
-          pip3 install yq
-          yq -r '.tests["applications.asset_tracker_v2.azure"].extra_configs[]' \
-            sample.yaml >> prj.conf
+          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' prj.conf
+          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' overlay-debug.conf
 
       - name: Configure Version
         run: |
-          APP_VERSION=${{ steps.version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
+          APP_VERSION=${{ needs.release-version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}\"" >> prj.conf
 
       - name: Enable debug logs
         if: matrix.loglevel == 'debug'
         run: echo "CONFIG_LOG_MAX_LEVEL=4" >> prj.conf
 
-      - name: Set network mode to LTE-m
-        if: matrix.network == 'ltem'
-        run: |
-          echo "# Set network mode to LTE-m" >> prj.conf
-          echo "CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y" >> prj.conf
-          echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=n" >> prj.conf
-
       - name: Set network mode to NB-IoT
         if: matrix.network == 'nbiot'
         run: |
           echo "# Set network mode to NB-IoT" >> prj.conf
-          echo "CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=n" >> prj.conf
           echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=y" >> prj.conf
+          sed -i 's/CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=/# CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=/' prj.conf
 
-      - name: Configure the Azure IoT DPS hostname
+      - name: Configure the Azure IoT DPS ID scope
         run: |
-          cat prj.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.prj.conf
-          mv azure.prj.conf prj.conf
-          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"" >> prj.conf
+          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" prj.conf
 
       - name: Enable SUPL client
         if: env.SUPL_CLIENT_LIB_DOWNLOAD != ''
@@ -134,9 +159,9 @@ jobs:
           echo "CONFIG_SUPL_CLIENT_LIB=y" >> prj.conf
           echo "CONFIG_AGPS=y" >> prj.conf
           echo "CONFIG_AGPS_SRC_SUPL=y" >> prj.conf
-          echo "CONFIG_FPU=y" >> prj.conf
 
       - run: cat prj.conf
+      - run: cat overlay-debug.conf
 
       - name: Login to GHCR
         uses: docker/login-action@v1
@@ -146,17 +171,17 @@ jobs:
           password: ${{ secrets.CR_PAT }}
 
       - name: Pull Docker image
-        run: docker pull ${{ needs.docker.outputs.docker_image }}
+        run: docker pull ${{ needs.docker.outputs.docker-image }}
 
       - name: Build with debug enabled
         if: matrix.loglevel == 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker_image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
 
       - name: Build with debug disabled
         if: matrix.loglevel != 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker_image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG=asset-tracker-cloud-firmware-azure.conf -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG=asset-tracker-cloud-firmware-azure.conf -DEXTRA_CFLAGS="-Werror=format-truncation"'
 
       - name: Copy firmware
         run: |
@@ -170,10 +195,13 @@ jobs:
             merged.hex
             app_update.bin
             prj.conf
+            overlay-debug.conf
 
   e2e-credentials:
     name: Create device credentials for end-to-end test
     runs-on: ubuntu-latest
+
+    needs: [build-id]
 
     strategy:
       matrix:
@@ -237,7 +265,7 @@ jobs:
       - name: Create device credentials
         run: |
           cd cloud
-          node cli create-device-cert -d ${DEVICE_ID}
+          node cli create-device-cert -d ${{ env.DEVICE_ID }}
 
       - name: Copy credentials
         run: |
@@ -246,7 +274,9 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
+          name:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           path: |
             e2e-credentials/*
 
@@ -257,67 +287,69 @@ jobs:
     name: Build firmware for end-to-end test
     runs-on: ubuntu-latest
 
-    needs: [e2e-credentials, docker]
+    needs: [e2e-credentials, docker, build-id]
 
     strategy:
       matrix:
         board: [nrf9160dk_nrf9160ns]
         network: [ltem]
 
-    outputs:
-      app_version: ${{ steps.configure-version.outputs.app_version }}
-
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions/download-artifact@v2
         with:
-          name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
+          name:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           path: e2e-credentials
 
       - name: Set device id
         run: |
           echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
-      - name: Configure asset_tracker_v2 for Azure
-        run: |
-          pip3 install yq
-          yq -r '.tests["applications.asset_tracker_v2.azure"].extra_configs[]' \
-            sample.yaml >> prj.conf
-
       - name: Configure Version
         id: configure-version
+        env:
+          APP_VERSION:
+            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
+            env.DEVICE_ID }}
         run: |
-          APP_VERSION=${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${DEVICE_ID}
-          echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
-          echo "::set-output name=app_version::${APP_VERSION}"
+
+      - name: Disable nRF Connect for Cloud backend
+        run: |
+          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' prj.conf
+          sed -i 's/CONFIG_AGPS_SRC_NRF_CLOUD=/# CONFIG_AGPS_SRC_NRF_CLOUD=/' prj.conf
+          sed -i 's/CONFIG_GPS_MODULE_NMEA=/# CONFIG_GPS_MODULE_NMEA=/' prj.conf
+          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' overlay-debug.conf
+
+      - name: Configure asset_tracker_v2 for Azure
+        run: |
+          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' prj.conf
+          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' overlay-debug.conf
+
+      - name: Lower GPS timeout
+        run: echo "CONFIG_DATA_GPS_TIMEOUT_SECONDS=1" >> prj.conf
+
+      - name: Disable sampling of GPS after connection
+        ## so device information is published quicker
+        run: echo "CONFIG_APP_REQUEST_GPS_ON_INITIAL_SAMPLING=n" >> prj.conf
 
       - name: Enable debug logs
         run: echo "CONFIG_LOG_MAX_LEVEL=4" >> prj.conf
 
-      - name: Set network mode to LTE-m
+      - name: Configure the Azure IoT DPS ID scope
         run: |
-          echo "# Set network mode to LTE-m" >> prj.conf
-          echo "CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=y" >> prj.conf
-          echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=n" >> prj.conf
-
-      - name: Configure the Azure IoT DPS hostname
-        run: |
-          cat prj.conf | sed 's/CONFIG_AWS_/# CONFIG_AWS_/' | sed 's/# CONFIG_AZURE_/CONFIG_AZURE_/' > azure.prj.conf
-          mv azure.prj.conf prj.conf
-          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"" >> prj.conf
+          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" prj.conf
 
       - name: Set MQTT client ID to test device
         run: |
           echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> prj.conf
-          echo "CONFIG_CLOUD_CLIENT_ID=\"${DEVICE_ID}\"" >> prj.conf
-
-      - name: Disable sampling of GPS after connection
-        ## so device information is published quicker
-        run: CONFIG_APP_REQUEST_GPS_ON_INITIAL_SAMPLING=n >> prj.conf
+          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ env.DEVICE_ID }}\"" >> prj.conf
 
       - run: cat prj.conf
+      - run: cat overlay-debug.conf
 
       - name: Login to GHCR
         uses: docker/login-action@v1
@@ -327,35 +359,38 @@ jobs:
           password: ${{ secrets.CR_PAT }}
 
       - name: Pull Docker image
-        run: docker pull ${{ needs.docker.outputs.docker_image }}
+        run: docker pull ${{ needs.docker.outputs.docker-image }}
 
       - name: Build
         run: |
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker_image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp build/zephyr/merged.hex firmware.hex
           cp prj.conf firmware.conf
 
       - name: Build with changed version for FOTA test
         run: |
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-upgraded\"" >> prj.conf
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker_image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp build/zephyr/app_update.bin fota-upgrade.bin
           cp prj.conf fota-upgrade.conf
 
       - uses: actions/upload-artifact@v2
         with:
-          name: e2e-firmware-${{ matrix.board }}-${{ matrix.network }}
+          name:
+            e2e-firmware-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           path: |
             firmware.hex
             firmware.conf
             fota-upgrade.bin
             fota-upgrade.conf
+            overlay-debug.conf
 
   e2e-device:
     name: Run the firmware for the end-to-end tests on a real device
     runs-on: [self-hosted, firmware-ci]
 
-    needs: [e2e-firmware, e2e-credentials]
+    needs: [e2e-firmware, e2e-credentials, build-id]
 
     outputs:
       connected: ${{ steps.device.outputs.connected }}
@@ -368,23 +403,32 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: e2e-firmware-${{ matrix.board }}-${{ matrix.network }}
+          name:
+            e2e-firmware-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
 
       - uses: actions/download-artifact@v2
         with:
-          name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
+          name:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           path: e2e-credentials
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
         id: device
+        env:
+          APP_VERSION:
+            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
+            env.DEVICE_ID }}
         with:
           device id: ${{ env.DEVICE_ID }}
-          app version: ${{ needs.e2e-firmware.outputs.app_version }}
+          app version: ${{ env.APP_VERSION }}
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
@@ -395,19 +439,23 @@ jobs:
             azure_fota: Error (-7) when trying to start firmware download
             azure_iot_integration: azure_iot_hub_init, error
           end on: |
-            azure_iot_hub_integration.cloud_wrap_init:  Version:     ${{ needs.e2e-firmware.outputs.app_version }}-upgraded
+            azure_iot_hub_integration.cloud_wrap_init:  Version:     ${{ env.APP_VERSION }}-upgraded
             "appV"
-            "${{ needs.e2e-firmware.outputs.app_version }}-upgraded"
+            "${{ env.APP_VERSION }}-upgraded"
             cloud_module.data_send: Data sent
           timeout in minutes: 20
           sec tag: 11
-          certificate location: ./e2e-credentials
+          certificate location:
+            ./e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
 
       - uses: actions/upload-artifact@v2
         with:
-          name: e2e-firmware-logs-${{ matrix.board }}-${{ matrix.network }}
+          name:
+            e2e-firmware-logs-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           path: |
             device.log
             flash.log
@@ -417,7 +465,7 @@ jobs:
     name: Run the end-to-end test
     runs-on: ubuntu-latest
 
-    needs: [e2e-firmware, e2e-device]
+    needs: [e2e-firmware, e2e-device, build-id]
 
     if: needs.e2e-device.outputs.connected == 'true'
 
@@ -429,32 +477,53 @@ jobs:
     steps:
       - uses: actions/download-artifact@v2
         with:
-          name: e2e-credentials-${{ matrix.board }}-${{ matrix.network }}
-          path: e2e-credentials
+          name:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
+          path:
+            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
+
+      - uses: actions/download-artifact@v2
+        with:
+          name:
+            e2e-firmware-logs-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
+          path:
+            e2e-firmware-logs-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run feature tests
         uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@saga
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
+        env:
+          APP_VERSION:
+            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
+            env.DEVICE_ID }}
         with:
           device id: ${{ env.DEVICE_ID }}
-          app version: ${{ needs.e2e-firmware.outputs.app_version }}
+          app version: ${{ env.APP_VERSION }}
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
           app name: ${{ secrets.APP_NAME }}
           feature dir: features
+          log dir:
+            e2e-firmware-logs-${{ matrix.board }}-${{ matrix.network }}-${{
+            needs.build-id.outputs.id }}
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
 
       - name: Remove test device
         # If the device did not connect, no Thing will have been created
         if:
-          ${{ !contains(toJSON(github.event.commits.*.message) ,
+          ${{ !contains(toJSON(github.event.commits.*.message),
           '[skip-cleanup]') }}
         run: |
           echo "Not implemented"
