@@ -217,7 +217,7 @@ jobs:
     steps:
       - name: Generate device ID
         run: |
-          DEVICE_ID=`uuidgen`
+          DEVICE_ID=`uuidgen | cut -d- -f1`
           echo "DEVICE_ID=${DEVICE_ID}" >> $GITHUB_ENV
 
       - name: Login to Azure
