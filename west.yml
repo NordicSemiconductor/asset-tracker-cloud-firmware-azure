@@ -4,10 +4,10 @@ manifest:
     - name: nordic
       url-base: https://github.com/nrfconnect
   projects:
-    - name: skd-nrf
+    - name: sdk-nrf
       path: nrf
       remote: nordic
-      revision: master
+      revision: v1.6.0-rc3
       import: true
   self:
     path: firmware

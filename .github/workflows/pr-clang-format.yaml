@@ -1,6 +1,10 @@
 name: ClangFormat
 
 on:
+  push:
+    paths:
+      - "**.c"
+      - "**.h"
   pull_request:
     paths:
       - "**.c"
