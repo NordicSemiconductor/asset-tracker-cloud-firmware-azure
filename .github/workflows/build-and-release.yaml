@@ -463,6 +463,7 @@ jobs:
             needs.build-id.outputs.id }}
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
+          powerCycle enabled: false
 
       - uses: actions/upload-artifact@v2
         with:
