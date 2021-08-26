@@ -377,8 +377,12 @@ jobs:
           cp prj.conf firmware.conf
 
       - name: Build with changed version for FOTA test
+        env:
+          APP_VERSION:
+            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
+            env.DEVICE_ID }}
         run: |
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-upgraded\"" >> prj.conf
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> prj.conf
           docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp build/zephyr/app_update.bin fota-upgrade.bin
           cp prj.conf fota-upgrade.conf
