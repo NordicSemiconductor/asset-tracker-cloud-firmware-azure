@@ -266,7 +266,7 @@ jobs:
           key: certificates
 
       - name: Clear certificates
-        if: github.event.inputs.clearCertificates != 'no'
+        if: github.event.inputs.clearCertificates === 'yes'
         run: |
           rm -rf ./cloud/certificates
         continue-on-error: true
