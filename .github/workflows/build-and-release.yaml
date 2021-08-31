@@ -20,6 +20,10 @@ on:
         description: "Rebuild Docker"
         required: false
         default: "no"
+      clearCertificates:
+        description: "Clear certificates"
+        required: false
+        default: "no"
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -260,6 +264,12 @@ jobs:
         with:
           path: cloud/certificates
           key: certificates
+
+      - name: Clear certificates
+        if: github.event.inputs.clearCertificates != 'no'
+        run: |
+          rm -rf ./cloud/certificates
+        continue-on-error: true
 
       - name: Check if intermediate cert exists
         run: |
