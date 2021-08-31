@@ -552,6 +552,9 @@ jobs:
           target: ${{ matrix.board }}
           network: ${{ matrix.network }}
 
+      - name: Enable Azure auto-install
+        run: az config set extension.use_dynamic_install=yes_without_prompt
+
       - name: Remove test device
         if:
           ${{ !contains(toJSON(github.event.commits.*.message),
