@@ -549,6 +549,7 @@ jobs:
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
+          azure iot hub dps id scope: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
           app name: ${{ secrets.APP_NAME }}
           feature dir: features
           log dir:
