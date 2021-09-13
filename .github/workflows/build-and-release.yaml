@@ -257,18 +257,13 @@ jobs:
 
       - name: Keep CA certificates around
         uses: actions/cache@v2
+        id: certs-cache
         with:
           path: cloud/certificates
           key: certificates
 
-      - name: Check if intermediate cert exists
-        run: |
-          ls ./cloud/certificates/*/CA.intermediate.* 1> /dev/null 2>&1
-          echo "SKIP_CERT_GENERATION=1" >> $GITHUB_ENV
-        continue-on-error: true
-
       - name: Create Intermediate CA certificate
-        if: env.SKIP_CERT_GENERATION != '1'
+        if: steps.certs-cache.outputs.cache-hit != 'true'
         run: |
           cd cloud  
           node cli create-ca-root
