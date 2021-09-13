@@ -20,10 +20,6 @@ on:
         description: "Rebuild Docker"
         required: false
         default: "no"
-      clearCertificates:
-        description: "Clear certificates"
-        required: false
-        default: "no"
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -261,7 +257,6 @@ jobs:
 
       - name: Keep CA certificates around
         uses: actions/cache@v2
-        if: github.event.inputs.clearCertificates != 'yes'
         with:
           path: cloud/certificates
           key: certificates
