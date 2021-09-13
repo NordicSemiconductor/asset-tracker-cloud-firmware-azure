@@ -261,15 +261,10 @@ jobs:
 
       - name: Keep CA certificates around
         uses: actions/cache@v2
+        if: github.event.inputs.clearCertificates != 'yes'
         with:
           path: cloud/certificates
           key: certificates
-
-      - name: Clear certificates
-        if: github.event.inputs.clearCertificates === 'yes'
-        run: |
-          rm -rf ./cloud/certificates
-        continue-on-error: true
 
       - name: Check if intermediate cert exists
         run: |
