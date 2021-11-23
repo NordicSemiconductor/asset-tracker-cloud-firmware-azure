@@ -383,6 +383,7 @@ jobs:
           azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
+          storage account name: ${{ secrets.STORAGE_ACCOUNT_NAME }}
           app name: ${{ secrets.APP_NAME }}
           hex file: firmware.hex
           fota file: fota-upgrade.bin
