@@ -124,45 +124,21 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Disable nRF Connect for Cloud backend
-        run: |
-          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' prj.conf
-          sed -i 's/CONFIG_GPS_MODULE_NMEA=/# CONFIG_GPS_MODULE_NMEA=/' prj.conf
-          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' overlay-debug.conf
-
-      - name: Configure asset_tracker_v2 for Azure
-        run: |
-          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' prj.conf
-          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' overlay-debug.conf
-
       - name: Configure Version
         run: |
-          APP_VERSION=${{ needs.release-version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}\"" >> prj.conf
-
-      - name: Enable debug logs
-        if: matrix.loglevel == 'debug'
-        run: echo "CONFIG_LOG_MAX_LEVEL=4" >> prj.conf
-
-      - name: Set network mode to NB-IoT
-        if: matrix.network == 'nbiot'
-        run: |
-          echo "# Set network mode to NB-IoT" >> prj.conf
-          echo "CONFIG_LTE_NETWORK_MODE_NBIOT_GPS=y" >> prj.conf
-          sed -i 's/CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=/# CONFIG_LTE_NETWORK_MODE_LTE_M_GPS=/' prj.conf
+          APP_VERSION=${{ needs.release-version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.loglevel }}
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}\"" >> firmware.conf
 
       - name: Configure the Azure IoT DPS ID scope
         run: |
-          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" prj.conf
+          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" firmware.conf
 
       - name: Enable nRF Cloud Assisted GPS
         run: |
-          echo "CONFIG_NRF_CLOUD=y" >> prj.conf
-          echo "CONFIG_AGPS=y" >> prj.conf
-          echo "CONFIG_AGPS_SRC_NRF_CLOUD=y" >> prj.conf
+          echo "CONFIG_AGPS=y" >> firmware.conf
+          echo "CONFIG_AGPS_SRC_NRF_CLOUD=y" >> firmware.conf
 
-      - run: cat prj.conf
-      - run: cat overlay-debug.conf
+      - run: cat firmware.conf
 
       - name: Login to GHCR
         uses: docker/login-action@v1
@@ -177,12 +153,12 @@ jobs:
       - name: Build with debug enabled
         if: matrix.loglevel == 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
 
       - name: Build with debug disabled
         if: matrix.loglevel != 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG=asset-tracker-cloud-firmware-azure.conf -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
 
       - name: Copy firmware
         run: |
@@ -191,12 +167,11 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.board }}-${{ matrix.network }}-${{ matrix.loglevel }}
+          name: ${{ matrix.board }}-${{ matrix.loglevel }}
           path: |
             merged.hex
             app_update.bin
-            prj.conf
-            overlay-debug.conf
+            firmware.conf
 
   e2e-credentials:
     name: Create device credentials for end-to-end test
@@ -271,8 +246,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path: |
             e2e-credentials/*
 
@@ -296,8 +270,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path: e2e-credentials
 
       - name: Set device id
@@ -308,42 +281,23 @@ jobs:
         id: configure-version
         env:
           APP_VERSION:
-            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
-            env.DEVICE_ID }}
+            ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         run: |
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> prj.conf
-
-      - name: Disable nRF Connect for Cloud backend
-        run: |
-          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' prj.conf
-          sed -i 's/CONFIG_AGPS/# CONFIG_AGPS/' prj.conf
-          # Needed for parsing nRF Cloud Assisted GPS Service data
-          echo "CONFIG_NRF_CLOUD=y >> prj.conf"
-          sed -i 's/CONFIG_GPS_MODULE_NMEA=/# CONFIG_GPS_MODULE_NMEA=/' prj.conf
-          sed -i 's/CONFIG_NRF_CLOUD/# CONFIG_NRF_CLOUD/' overlay-debug.conf
-
-      - name: Configure asset_tracker_v2 for Azure
-        run: |
-          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' prj.conf
-          sed -i 's/# CONFIG_AZURE_/CONFIG_AZURE_/' overlay-debug.conf
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> firmware.conf
 
       - name: Disable GPS
-        run: echo "CONFIG_GPS_MODULE=n" >> prj.conf
-
-      - name: Enable debug logs
-        run: echo "CONFIG_LOG_MAX_LEVEL=4" >> prj.conf
+        run: echo "CONFIG_GPS_MODULE=n" >> firmware.conf
 
       - name: Configure the Azure IoT DPS ID scope
         run: |
-          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" prj.conf
+          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" firmware.conf
 
       - name: Set MQTT client ID to test device
         run: |
-          echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> prj.conf
-          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ env.DEVICE_ID }}\"" >> prj.conf
+          echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> firmware.conf
+          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ env.DEVICE_ID }}\"" >> firmware.conf
 
-      - run: cat prj.conf
-      - run: cat overlay-debug.conf
+      - run: cat firmware.conf
 
       - name: Login to GHCR
         uses: docker/login-action@v1
@@ -357,32 +311,28 @@ jobs:
 
       - name: Build
         run: |
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp build/zephyr/merged.hex firmware.hex
-          cp prj.conf firmware.conf
 
       - name: Build with changed version for FOTA test
         env:
           APP_VERSION:
-            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
-            env.DEVICE_ID }}
+            ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         run: |
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> prj.conf
-          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> firmware.conf
+          docker run --rm -v ${PWD}:/workdir/ncs/firmware ${{ needs.docker.outputs.docker-image }} /bin/bash -c 'cd ncs/firmware && west update && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp build/zephyr/app_update.bin fota-upgrade.bin
-          cp prj.conf fota-upgrade.conf
+          cp firmware.conf fota-upgrade.conf
 
       - uses: actions/upload-artifact@v2
         with:
           name:
-            e2e-firmware-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-firmware-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path: |
             firmware.hex
             firmware.conf
             fota-upgrade.bin
             fota-upgrade.conf
-            overlay-debug.conf
 
   e2e-device:
     name: Run the firmware for the end-to-end tests on a real device
@@ -402,21 +352,18 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name:
-            e2e-firmware-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-firmware-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
 
       - uses: actions/download-artifact@v2
         with:
           name:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{
             needs.build-id.outputs.id }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run firmware on real device
@@ -426,8 +373,7 @@ jobs:
         id: device
         env:
           APP_VERSION:
-            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
-            env.DEVICE_ID }}
+            ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
@@ -448,22 +394,19 @@ jobs:
           timeout in minutes: 20
           sec tag: 11
           certificate location:
-            ./e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            ./e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id
+            }}
           target: ${{ matrix.board }}
-          network: ${{ matrix.network }}
           powerCycle enabled: false
 
       - uses: actions/upload-artifact@v2
         with:
-          name:
-            e2e-run-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+          name: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path: |
             device.log
             flash.log
             job.json
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+            e2e-credentials-${{ matrix.board }}-${{
             needs.build-id.outputs.id }}
             firmware.hex
             fota-upgrade.bin
@@ -490,24 +433,18 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path:
-            e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+            e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
 
       - uses: actions/download-artifact@v2
         with:
-          name:
-            e2e-run-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
-          path:
-            e2e-run-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+          name: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
+          path: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
 
       - name: Set device id
         run: |
-          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{ matrix.network }}-${{
+          echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{
             needs.build-id.outputs.id }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
       - name: Run feature tests
@@ -516,8 +453,7 @@ jobs:
         continue-on-error: true
         env:
           APP_VERSION:
-            ${{ github.sha }}-${{ matrix.board }}-${{ matrix.network }}-${{
-            env.DEVICE_ID }}
+            ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
@@ -527,11 +463,8 @@ jobs:
           azure iot hub dps id scope: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
           app name: ${{ secrets.APP_NAME }}
           feature dir: features
-          log dir:
-            e2e-run-${{ matrix.board }}-${{ matrix.network }}-${{
-            needs.build-id.outputs.id }}
+          log dir: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           target: ${{ matrix.board }}
-          network: ${{ matrix.network }}
 
       - name: Enable Azure auto-install
         run: az config set extension.use_dynamic_install=yes_without_prompt
