@@ -129,7 +129,7 @@ jobs:
 
       - name: Configure the Azure IoT DPS ID scope
         run: |
-          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" firmware.conf
+          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"" >> firmware.conf
 
       - run: cat firmware.conf
 
@@ -288,7 +288,7 @@ jobs:
 
       - name: Configure the Azure IoT DPS ID scope
         run: |
-          sed -i "s/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"\"/CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"/" firmware.conf
+          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${AZURE_IOT_HUB_DPS_ID_SCOPE}\"" >> firmware.conf
 
       - name: Set MQTT client ID to test device
         run: |
