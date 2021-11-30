@@ -156,6 +156,7 @@ jobs:
       - name: Copy firmware
         run: |
           cp build/zephyr/merged.hex ./
+          cp build/zephyr/app_signed.hex ./
           cp build/zephyr/app_update.bin ./
 
       - uses: actions/upload-artifact@v2
@@ -163,6 +164,7 @@ jobs:
           name: ${{ matrix.board }}-${{ matrix.loglevel }}
           path: |
             merged.hex
+            app_signed.hex
             app_update.bin
             firmware.conf
 
