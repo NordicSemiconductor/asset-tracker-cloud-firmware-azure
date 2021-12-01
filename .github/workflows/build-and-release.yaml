@@ -161,7 +161,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.board }}-${{ matrix.loglevel }}
+          name: ${{ matrix.board }}-${{ matrix.loglevel }}-${{ github.sha }}
           path: |
             merged.hex
             app_signed.hex
