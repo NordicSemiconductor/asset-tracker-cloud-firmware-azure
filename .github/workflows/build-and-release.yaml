@@ -342,8 +342,6 @@ jobs:
             azure_iot_integration: azure_iot_hub_init, error
           end on: |
             azure_iot_hub_integration.cloud_wrap_init:  Version:      ${{ env.APP_VERSION }}-upgraded
-            "appV"
-            "${{ env.APP_VERSION }}-upgraded"
             cloud_module.data_send: Data sent
           timeout in minutes: 20
           sec tag: 11
