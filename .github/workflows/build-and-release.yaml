@@ -116,7 +116,7 @@ jobs:
 
     strategy:
       matrix:
-        board: [thingy91_nrf9160ns, nrf9160dk_nrf9160ns]
+        board: [thingy91_nrf9160_ns, nrf9160dk_nrf9160_ns]
         loglevel: [debug, nodebug]
 
     steps:
@@ -176,7 +176,7 @@ jobs:
 
     strategy:
       matrix:
-        board: [nrf9160dk_nrf9160ns]
+        board: [nrf9160dk_nrf9160_ns]
         network: [ltem]
 
     steps:
@@ -256,7 +256,7 @@ jobs:
 
     strategy:
       matrix:
-        board: [nrf9160dk_nrf9160ns]
+        board: [nrf9160dk_nrf9160_ns]
         network: [ltem]
 
     steps:
@@ -350,7 +350,7 @@ jobs:
 
     strategy:
       matrix:
-        board: [nrf9160dk_nrf9160ns]
+        board: [nrf9160dk_nrf9160_ns]
         network: [ltem]
 
     steps:
@@ -427,7 +427,7 @@ jobs:
 
     strategy:
       matrix:
-        board: [nrf9160dk_nrf9160ns]
+        board: [nrf9160dk_nrf9160_ns]
         network: [ltem]
 
     steps:
