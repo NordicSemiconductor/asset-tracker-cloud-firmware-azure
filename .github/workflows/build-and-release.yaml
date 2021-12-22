@@ -260,6 +260,7 @@ jobs:
         run: |
           docker run --rm -v ${PWD}:/workdir/project coderbyheart/fw-nrfconnect-nrf-docker:main /bin/bash -c 'cd firmware && west init -l && west update --narrow -o=--depth=1 && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp firmware/build/zephyr/merged.hex firmware.hex
+          cp firmware/build/zephyr/app_update.bin firmware.bin
 
       - name: Build with changed version for FOTA test
         env:
@@ -269,6 +270,7 @@ jobs:
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> firmware.conf
           docker run --rm -v ${PWD}:/workdir/project coderbyheart/fw-nrfconnect-nrf-docker:main /bin/bash -c 'cd firmware && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp firmware/build/zephyr/app_update.bin fota-upgrade.bin
+          cp firmware/build/zephyr/merged.hex fota-upgrade.hex
           cp firmware/firmware.conf fota-upgrade.conf
 
       - uses: actions/upload-artifact@v2
@@ -277,7 +279,9 @@ jobs:
             e2e-firmware-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path: |
             firmware.hex
+            firmware.bin
             firmware.conf
+            fota-upgrade.hex
             fota-upgrade.bin
             fota-upgrade.conf
 
