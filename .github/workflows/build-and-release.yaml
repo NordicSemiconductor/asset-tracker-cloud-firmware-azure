@@ -212,7 +212,7 @@ jobs:
         with:
           path: firmware
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name:
             e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
@@ -302,12 +302,12 @@ jobs:
         network: [ltem]
 
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name:
             e2e-firmware-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name:
             e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
@@ -384,14 +384,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name:
             e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path:
             e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
           path: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
@@ -444,6 +444,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
 
       - run: npx semantic-release
