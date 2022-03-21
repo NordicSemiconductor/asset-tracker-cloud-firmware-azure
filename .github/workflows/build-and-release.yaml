@@ -162,7 +162,7 @@ jobs:
           npx tsc
 
       - name: Keep CA certificates around
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: certs-cache
         with:
           path: cloud/certificates
