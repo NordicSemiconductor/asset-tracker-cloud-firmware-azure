@@ -15,6 +15,7 @@ on:
       - source-update
   workflow_dispatch:
 
+# FIXME: use production env
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   LOCATION: ${{ secrets.LOCATION }}
@@ -23,6 +24,11 @@ env:
   AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
   CI: 1
   FORCE_COLOR: 3
+
+permissions:
+  id-token: write
+  contents: write
+  issues: write
 
 jobs:
   # This generates a unique build id (which is also different for re-runs) to
