@@ -17,7 +17,6 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
   LOCATION: ${{ secrets.LOCATION }}
   APP_NAME: ${{ secrets.APP_NAME }}
   RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
@@ -154,7 +153,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: List Azure accounts
         run: az account list --output table
@@ -406,7 +407,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - uses: actions/download-artifact@v3
         with:
@@ -435,7 +438,9 @@ jobs:
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
-          azure credentials: ${{ secrets.AZURE_CREDENTIALS }}
+          azure client id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure tenant id: ${{ secrets.AZURE_TENANT_ID }}
+          azure subscription id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
           azure iot hub dps id scope: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
