@@ -134,6 +134,9 @@ jobs:
     name: Create device credentials for end-to-end test
     runs-on: ubuntu-latest
 
+    environment:
+      name: production
+
     if: ${{ !contains(toJSON(github.event.commits.*.message), '[skip-e2e]') }}
 
     needs: [build-id]
