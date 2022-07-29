@@ -146,6 +146,12 @@ jobs:
         board: [nrf9160dk_nrf9160_ns]
         network: [ltem]
 
+    env:
+      LOCATION: ${{ secrets.LOCATION }}
+      APP_NAME: ${{ secrets.APP_NAME }}
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
+
     steps:
       - name: Generate device ID
         run: |
@@ -154,6 +160,7 @@ jobs:
 
       - name: Login to Azure
         uses: coderbyheart/azure-login-action@output-token-with-node_modules
+        id: azure-login
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -193,14 +200,14 @@ jobs:
         if: steps.certs-cache.outputs.cache-hit != 'true'
         run: |
           cd cloud  
-          node cli create-ca-root
-          node cli proof-ca-root-possession
-          node cli create-ca-intermediate
+          ./cli.sh create-ca-root
+          ./cli.sh proof-ca-root-possession
+          ./cli.sh create-ca-intermediate
 
       - name: Create device credentials
         run: |
           cd cloud
-          node cli create-simulator-cert -d ${{ env.DEVICE_ID }}
+          ./cli.sh create-simulator-cert -d ${{ env.DEVICE_ID }}
 
       - name: Copy credentials
         run: |
