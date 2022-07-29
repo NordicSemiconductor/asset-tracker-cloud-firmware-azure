@@ -158,6 +158,8 @@ jobs:
           DEVICE_ID=`uuidgen | cut -d- -f1`
           echo "DEVICE_ID=${DEVICE_ID}" >> $GITHUB_ENV
 
+      - run: node -v
+
       - name: Login to Azure
         uses: coderbyheart/azure-login-action@output-token-with-node_modules
         id: azure-login
@@ -340,6 +342,8 @@ jobs:
         network: [ltem]
 
     steps:
+      - run: node -v
+
       - name: Login to Azure
         uses: coderbyheart/azure-login-action@output-token-with-node_modules
         id: login
