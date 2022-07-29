@@ -217,7 +217,7 @@ jobs:
       - name: Store Azure token
         # It cannot be put into an output because some parts of the JSON contain values in secrets
         run: |
-          echo '${{ steps.azure-login.outputs.token }}' > e2e-credentials/azure-token.json
+          echo '${{ steps.azure-login.outputs.token }}' | jq '.[]' > e2e-credentials/azure-token.json
 
       - uses: actions/upload-artifact@v3
         with:
@@ -365,7 +365,7 @@ jobs:
       - name: Load Azure token
         id: azure-token
         run: |
-          TOKEN=`jq @json < e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}/azure-token.json
+          TOKEN=`jq @json < e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}/azure-token.json`
           echo "::set-output name=token::$TOKEN"
 
       - name: Run firmware on real device
@@ -453,7 +453,7 @@ jobs:
       - name: Load Azure token
         id: azure-token
         run: |
-          TOKEN=`jq @json < e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}/azure-token.json
+          TOKEN=`jq @json < e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}/azure-token.json`
           echo "::set-output name=token::$TOKEN"
 
       - name: Run feature tests
