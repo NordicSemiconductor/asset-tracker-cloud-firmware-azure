@@ -152,13 +152,14 @@ jobs:
       RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
       AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
 
+    outputs:
+      azure-token: ${{ steps.azure-login.outputs.token }}
+
     steps:
       - name: Generate device ID
         run: |
           DEVICE_ID=`uuidgen | cut -d- -f1`
           echo "DEVICE_ID=${DEVICE_ID}" >> $GITHUB_ENV
-
-      - run: node -v
 
       - name: Login to Azure
         uses: coderbyheart/azure-login-action@output-token-with-node_modules
@@ -342,16 +343,6 @@ jobs:
         network: [ltem]
 
     steps:
-      - run: node -v
-
-      - name: Login to Azure
-        uses: coderbyheart/azure-login-action@output-token-with-node_modules
-        id: login
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       - uses: actions/download-artifact@v3
         with:
           name:
@@ -380,7 +371,7 @@ jobs:
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
-          azure credentials: ${{ steps.login.outputs.token }}
+          azure credentials: ${{ needs.e2e-credentials.outputs.azure-token }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
           storage account name: ${{ secrets.STORAGE_ACCOUNT_NAME }}
@@ -420,7 +411,7 @@ jobs:
     environment:
       name: production
 
-    needs: [e2e-firmware, e2e-device, build-id]
+    needs: [e2e-credentials, e2e-firmware, e2e-device, build-id]
 
     if:
       ${{ needs.e2e-device.outputs.connected == 'true' &&
@@ -433,14 +424,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Login to Azure
-        uses: coderbyheart/azure-login-action@output-token-with-node_modules
-        id: login
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - uses: actions/download-artifact@v3
         with:
@@ -469,7 +452,7 @@ jobs:
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
-          azure credentials: ${{ steps.login.outputs.token }}
+          azure credentials: ${{ needs.e2e-credentials.outputs.azure-token }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
           azure iot hub dps id scope: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
