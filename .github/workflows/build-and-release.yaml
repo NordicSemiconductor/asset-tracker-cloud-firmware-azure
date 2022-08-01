@@ -159,7 +159,7 @@ jobs:
           echo "DEVICE_ID=${DEVICE_ID}" >> $GITHUB_ENV
 
       - name: Login to Azure
-        uses: coderbyheart/azure-login-action@output-token-with-node_modules
+        uses: azure/login@v1
         id: azure-login
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
@@ -213,11 +213,6 @@ jobs:
         run: |
           mkdir e2e-credentials
           cp cloud/certificates/*/device-${{ env.DEVICE_ID }}* e2e-credentials
-
-      - name: Store Azure token
-        # It cannot be put into an output because some parts of the JSON contain values in secrets
-        run: |
-          echo '${{ steps.azure-login.outputs.token }}' | jq '.[]' > e2e-credentials/azure-token.json
 
       - uses: actions/upload-artifact@v3
         with:
@@ -362,18 +357,16 @@ jobs:
           echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{
             needs.build-id.outputs.id }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
 
-      - name: Load Azure token
-        id: azure-token
-        run: |
-          TOKEN=`jq < e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}/azure-token.json`
-          # Escape special characters
-          TOKEN="${TOKEN//'%'/'%25'}"
-          TOKEN="${TOKEN//$'\n'/'%0A'}"
-          TOKEN="${TOKEN//$'\r'/'%0D'}"
-          echo "::set-output name=token::$TOKEN"
+      - name: Login to Azure
+        uses: azure/login@v1
+        id: azure-login
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run firmware on real device
-        uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
+        uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
         id: device
@@ -383,7 +376,6 @@ jobs:
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
-          azure credentials: ${{ steps.azure-token.outputs.token }}
           azure location: ${{ secrets.LOCATION }}
           azure resource group: ${{ secrets.RESOURCE_GROUP }}
           storage account name: ${{ secrets.STORAGE_ACCOUNT_NAME }}
@@ -453,19 +445,17 @@ jobs:
         run: |
           echo "DEVICE_ID=`find e2e-credentials-${{ matrix.board }}-${{
             needs.build-id.outputs.id }} -name \*.json | head -n 1 | xargs cat | jq -r '.clientId'`" >> $GITHUB_ENV
-      
-      - name: Load Azure token
-        id: azure-token
-        run: |
-          TOKEN=`jq < e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id }}/azure-token.json`
-          # Escape special characters
-          TOKEN="${TOKEN//'%'/'%25'}"
-          TOKEN="${TOKEN//$'\n'/'%0A'}"
-          TOKEN="${TOKEN//$'\r'/'%0D'}"
-          echo "::set-output name=token::$TOKEN"
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        id: azure-login
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run feature tests
-        uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@saga
+        uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@oidc
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
         env:
@@ -474,9 +464,6 @@ jobs:
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
-          azure credentials: ${{ needs.e2e-credentials.outputs.azure-token }}
-          azure location: ${{ secrets.LOCATION }}
-          azure resource group: ${{ secrets.RESOURCE_GROUP }}
           azure iot hub dps id scope: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
           app name: ${{ secrets.APP_NAME }}
           feature dir: features
