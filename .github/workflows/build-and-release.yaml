@@ -343,6 +343,8 @@ jobs:
         network: [ltem]
 
     steps:
+      - uses: actions/checkout@v3
+
       - uses: actions/download-artifact@v3
         with:
           name:
@@ -368,8 +370,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - uses: actions/checkout@v3
-
       - name: Clone nRF Asset Tracker for Azure
         run: git clone `cat package.json | jq -r '.cloud.repository'` cloud
 
@@ -384,11 +384,6 @@ jobs:
       - name: Print info
         working-directory: cloud
         run: ./cli.sh info
-
-      - name: List credentials
-        run:
-          ls -la ./e2e-credentials-${{ matrix.board }}-${{
-          needs.build-id.outputs.id }}
 
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
