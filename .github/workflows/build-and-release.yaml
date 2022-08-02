@@ -176,8 +176,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Clone nRF Asset Tracker for Azure
-        run: |
-          git clone `cat package.json | jq -r '.cloud.repository'` cloud
+        run: git clone `cat package.json | jq -r '.cloud.repository'` cloud
 
       - name: Install dependencies
         working-directory: cloud
@@ -363,9 +362,10 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - uses: actions/checkout@v3
+
       - name: Clone nRF Asset Tracker for Azure
-        run: |
-          git clone `cat package.json | jq -r '.cloud.repository'` cloud
+        run: git clone `cat package.json | jq -r '.cloud.repository'` cloud
 
       - name: Install dependencies
         working-directory: cloud
