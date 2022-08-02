@@ -385,6 +385,11 @@ jobs:
         working-directory: cloud
         run: ./cli.sh info
 
+      - name: List credentials
+        run:
+          ls -la ./e2e-credentials-${{ matrix.board }}-${{
+          needs.build-id.outputs.id }}
+
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
         # For now, ignore test failures until we get more experience running these tests
@@ -396,8 +401,6 @@ jobs:
         with:
           device id: ${{ env.DEVICE_ID }}
           app version: ${{ env.APP_VERSION }}
-          azure location: ${{ secrets.LOCATION }}
-          azure resource group: ${{ secrets.RESOURCE_GROUP }}
           storage account name: ${{ secrets.STORAGE_ACCOUNT_NAME }}
           app name: ${{ secrets.APP_NAME }}
           hex file: firmware.hex
