@@ -319,6 +319,12 @@ jobs:
     environment:
       name: production
 
+    env:
+      LOCATION: ${{ secrets.LOCATION }}
+      APP_NAME: ${{ secrets.APP_NAME }}
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
+
     if: ${{ !contains(toJSON(github.event.commits.*.message), '[skip-e2e]') }}
 
     needs:
