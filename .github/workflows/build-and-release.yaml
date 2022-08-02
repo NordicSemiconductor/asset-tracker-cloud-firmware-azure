@@ -413,7 +413,7 @@ jobs:
             }}
           target: ${{ matrix.board }}
           powerCycle enabled: false
-          ci runner package: "@nordicsemiconductor/firmware-ci-runner-azure/v/2.1.0-oidc.2"
+          ci runner package: "@nordicsemiconductor/firmware-ci-runner-azure@2.1.0-oidc.2"
 
       - uses: actions/upload-artifact@v3
         with:
