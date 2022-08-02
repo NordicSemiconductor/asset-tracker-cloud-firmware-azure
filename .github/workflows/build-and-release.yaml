@@ -180,14 +180,12 @@ jobs:
           git clone `cat package.json | jq -r '.cloud.repository'` cloud
 
       - name: Install dependencies
-        run: |
-          cd cloud
-          npm ci
+        working-directory: cloud
+        run: npm ci
 
       - name: Compile TypeScript
-        run: |
-          cd cloud
-          npx tsc
+        working-directory: cloud
+        run: npx tsc
 
       - name: Keep CA certificates around
         uses: actions/cache@v3
@@ -198,15 +196,15 @@ jobs:
 
       - name: Create Intermediate CA certificate
         if: steps.certs-cache.outputs.cache-hit != 'true'
+        working-directory: cloud
         run: |
-          cd cloud  
           ./cli.sh create-ca-root
           ./cli.sh proof-ca-root-possession
           ./cli.sh create-ca-intermediate
 
       - name: Create device credentials
+        working-directory: cloud
         run: |
-          cd cloud
           ./cli.sh create-simulator-cert -d ${{ env.DEVICE_ID }}
 
       - name: Copy credentials
@@ -364,6 +362,22 @@ jobs:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Clone nRF Asset Tracker for Azure
+        run: |
+          git clone `cat package.json | jq -r '.cloud.repository'` cloud
+
+      - name: Install dependencies
+        working-directory: cloud
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: cloud
+        run: npx tsc
+
+      - name: Print info
+        working-directory: cloud
+        run: ./cli.sh info
 
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
