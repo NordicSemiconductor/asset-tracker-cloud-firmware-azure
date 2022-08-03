@@ -370,31 +370,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Clone nRF Asset Tracker for Azure
-        run: git clone `cat package.json | jq -r '.cloud.repository'` cloud
-
-      - name: Install dependencies
-        working-directory: cloud
-        run: npm ci
-
-      - name: Compile TypeScript
-        working-directory: cloud
-        run: npx tsc
-
-      - name: Print info
-        working-directory: cloud
-        run: ./cli.sh info
-
-      - name: Show IoT Hub into
-        working-directory: cloud
-        run: az iot hub show --name ${{ secrets.APP_NAME }}IotHub
-
-      - name: Query IoT hub devices
-        working-directory: cloud
-        run: |
-          az config set extension.use_dynamic_install=yes_without_prompt
-          az iot hub query -n ${{ secrets.APP_NAME }}IotHub -q 'SELECT * FROM devices'
-
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
         # For now, ignore test failures until we get more experience running these tests
@@ -529,3 +504,82 @@ jobs:
       - uses: actions/download-artifact@v3
 
       - run: npx semantic-release
+
+  hosted-runner-debug:
+    name: Debugging the self-hosted runner
+    runs-on: [self-hosted, firmware-ci]
+
+    environment:
+      name: production
+
+    env:
+      LOCATION: ${{ secrets.LOCATION }}
+      APP_NAME: ${{ secrets.APP_NAME }}
+      RESOURCE_GROUP: ${{ secrets.RESOURCE_GROUP }}
+      AZURE_IOT_HUB_DPS_ID_SCOPE: ${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        id: azure-login
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Clone nRF Asset Tracker for Azure
+        run: git clone `cat package.json | jq -r '.cloud.repository'` cloud
+
+      - name: Install dependencies
+        working-directory: cloud
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: cloud
+        run: npx tsc
+
+      - name: Print info
+        working-directory: cloud
+        run: ./cli.sh info
+
+      - name: Show IoT Hub into
+        working-directory: cloud
+        run: az iot hub show --name ${{ secrets.APP_NAME }}IotHub
+
+      - name: Query IoT hub devices
+        working-directory: cloud
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az iot hub query -n ${{ secrets.APP_NAME }}IotHub -q 'SELECT * FROM devices'
+
+      - name: Run firmware on real device (will fail)
+        uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
+        # For now, ignore test failures until we get more experience running these tests
+        continue-on-error: true
+        id: device
+        env:
+          APP_VERSION:
+            ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
+        with:
+          device id: ${{ env.DEVICE_ID }}
+          app version: ${{ env.APP_VERSION }}
+          storage account name: ${{ secrets.STORAGE_ACCOUNT_NAME }}
+          app name: ${{ secrets.APP_NAME }}
+          hex file: firmware.hex
+          fota file: fota-upgrade.bin
+          abort on: |
+            azure_fota: Error (-7) when trying to start firmware download
+            azure_iot_integration: azure_iot_hub_init, error
+          end on: |
+            azure_iot_hub_integration.cloud_wrap_init:  Version:      ${{ env.APP_VERSION }}-upgraded
+            cloud_module.data_send: Data sent
+          timeout in minutes: 20
+          sec tag: 11
+          certificate location:
+            ./e2e-credentials-${{ matrix.board }}-${{ needs.build-id.outputs.id
+            }}
+          target: ${{ matrix.board }}
+          powerCycle enabled: false
+          ci runner package: "@nordicsemiconductor/firmware-ci-runner-azure@2.1.0-oidc.2"
