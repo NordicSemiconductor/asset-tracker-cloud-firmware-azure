@@ -385,6 +385,16 @@ jobs:
         working-directory: cloud
         run: ./cli.sh info
 
+      - name: Show IoT Hub into
+        working-directory: cloud
+        run: az iot hub show --name ${{ secrets.APP_NAME }}IotHub
+
+      - name: Query IoT hub devices
+        working-directory: cloud
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          az iot hub query -n ${{ secrets.APP_NAME }}IotHub -q 'SELECT * FROM devices'
+
       - name: Run firmware on real device
         uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
         # For now, ignore test failures until we get more experience running these tests
