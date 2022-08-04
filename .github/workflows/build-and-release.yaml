@@ -371,7 +371,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run firmware on real device
-        uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@oidc
+        uses: NordicSemiconductor/cloud-azure-firmware-ci-device-action@saga
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
         id: device
@@ -398,7 +398,7 @@ jobs:
             }}
           target: ${{ matrix.board }}
           powerCycle enabled: false
-          ci runner package: "@nordicsemiconductor/firmware-ci-runner-azure@2.1.0-oidc.2"
+          ci runner package: "@nordicsemiconductor/firmware-ci-runner-azure@3"
 
       - uses: actions/upload-artifact@v3
         with:
@@ -459,7 +459,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Run feature tests
-        uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@oidc
+        uses: NordicSemiconductor/cloud-azure-firmware-ci-feature-runner-action@saga
         # For now, ignore test failures until we get more experience running these tests
         continue-on-error: true
         env:
