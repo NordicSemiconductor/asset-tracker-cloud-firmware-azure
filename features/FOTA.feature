@@ -6,5 +6,5 @@ Feature: Upgrade the firmware
 
         Then the Firmware CI run device log should contain
         """
-        azure_iot_hub_integration.cloud_wrap_init:  Version:      {appVersion}-upgraded
+        azure_iot_hub_integration: cloud_wrap_init:  Version:      {appVersion}-upgraded
         """
