@@ -262,14 +262,6 @@ jobs:
         run: |
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> firmware/firmware.conf
 
-      - name: Disable GPS
-        run: echo "CONFIG_GNSS_MODULE=n" >> firmware/firmware.conf
-
-      - name: Disable nRF Cloud Assisted GPS logging
-        run: |
-          # Because A-GPS is disabled this KConfig setting will not be defined at all.
-          sed -i 's/CONFIG_NRF_CLOUD_GPS_LOG_LEVEL_DBG=y/# CONFIG_NRF_CLOUD_GPS_LOG_LEVEL_DBG=y/' firmware/overlay-debug.conf
-
       - name: Configure the Azure IoT DPS ID scope
         run: |
           echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}\"" >> firmware/firmware.conf
@@ -286,7 +278,7 @@ jobs:
 
       - name: Build
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west init -l && west update --narrow -o=--depth=1 && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west init -l && west update --narrow -o=--depth=1 && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp firmware/build/zephyr/merged.hex firmware.hex
           cp firmware/build/zephyr/app_update.bin firmware.bin
           cp firmware/firmware.conf firmware.conf
@@ -297,7 +289,7 @@ jobs:
             ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         run: |
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> firmware/firmware.conf
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror=format-truncation"'
           cp firmware/build/zephyr/app_update.bin fota-upgrade.bin
           cp firmware/build/zephyr/merged.hex fota-upgrade.hex
           cp firmware/firmware.conf fota-upgrade.conf
@@ -389,6 +381,8 @@ jobs:
             azure_fota: Error (-7) when trying to start firmware download
             azure_iot_integration: azure_iot_hub_init, error
           end on: |
+            CLOUD_WRAP_EVT_AGPS_DATA_RECEIVED
+            CLOUD_WRAP_EVT_PGPS_DATA_RECEIVED
             azure_iot_hub_integration: cloud_wrap_init:  Version:      ${{ env.APP_VERSION }}-upgraded
             azure_iot_hub_integration: azure_iot_hub_event_handler: AZURE_IOT_HUB_EVT_PUBACK
           timeout in minutes: 20
