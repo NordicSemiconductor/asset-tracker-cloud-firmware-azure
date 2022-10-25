@@ -190,17 +190,16 @@ jobs:
 
       - name: Keep CA certificates around
         uses: actions/cache@v3
-        id: certs-cache
+        id: certs-cache-2022-10-25
         with:
           path: cloud/certificates
           key: certificates
 
       - name: Create Intermediate CA certificate
-        if: steps.certs-cache.outputs.cache-hit != 'true'
+        if: steps.certs-cache-2022-10-25.outputs.cache-hit != 'true'
         working-directory: cloud
         run: |
           ./cli.sh create-ca-root
-          ./cli.sh proof-ca-root-possession
           ./cli.sh create-ca-intermediate
 
       - name: Create device credentials
