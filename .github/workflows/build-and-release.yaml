@@ -282,7 +282,7 @@ jobs:
       - name: Build
         working-directory: firmware
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf;e2e.conf" -DEXTRA_CFLAGS="-Werror"
           cp build/zephyr/merged.hex ../firmware.hex
           cp build/zephyr/app_update.bin ../firmware.bin
           cp firmware.conf ../firmware.conf
@@ -294,7 +294,7 @@ jobs:
             ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         run: |
           echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> firmware.conf
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf;e2e.conf" -DEXTRA_CFLAGS="-Werror"
           cp build/zephyr/app_update.bin ../fota-upgrade.bin
           cp build/zephyr/merged.hex ../fota-upgrade.hex
           cp firmware.conf ../fota-upgrade.conf
