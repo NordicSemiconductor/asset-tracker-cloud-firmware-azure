@@ -90,36 +90,38 @@ jobs:
           path: firmware
 
       - name: Configure Version
+        working-directory: firmware
         run: |
           APP_VERSION=${{ needs.release-version.outputs.nextRelease }}-${{ matrix.board }}-${{ matrix.loglevel }}
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}\"" >> firmware/firmware.conf
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}\"" >> firmware.conf
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
 
       - name: Configure the Azure IoT DPS ID scope
+        working-directory: firmware
         run: |
-          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}\"" >> firmware/firmware.conf
+          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}\"" >> firmware.conf
 
       - run: cat firmware/firmware.conf
 
-      - name: Pull Docker image
-        run: docker pull nordicplayground/nrfconnect-sdk:main
-
       - name: Build with debug enabled
+        working-directory: firmware
         if: matrix.loglevel == 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west init -l && west update --narrow -o=--depth=1 && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"'
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
 
       - name: Build with debug disabled
+        working-directory: firmware
         if: matrix.loglevel != 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west init -l && west update --narrow -o=--depth=1 && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"'
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
 
       - name: Copy firmware
+        working-directory: firmware
         run: |
-          cp firmware/build/zephyr/merged.hex ./
-          cp firmware/build/zephyr/app_signed.hex ./
-          cp firmware/build/zephyr/app_update.bin ./
-          cp firmware/firmware.conf ./
+          cp build/zephyr/merged.hex ../
+          cp build/zephyr/app_signed.hex ../
+          cp build/zephyr/app_update.bin ../
+          cp firmware.conf ../
 
       - uses: actions/upload-artifact@v3
         with:
@@ -257,43 +259,45 @@ jobs:
 
       - name: Configure Version
         id: configure-version
+        working-directory: firmware
         env:
           APP_VERSION:
             ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         run: |
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> firmware/firmware.conf
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${APP_VERSION}-original\"" >> firmware.conf
 
       - name: Configure the Azure IoT DPS ID scope
+        working-directory: firmware
         run: |
-          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}\"" >> firmware/firmware.conf
+          echo "CONFIG_AZURE_IOT_HUB_DPS_ID_SCOPE=\"${{ secrets.AZURE_IOT_HUB_DPS_ID_SCOPE }}\"" >> firmware.conf
 
       - name: Set MQTT client ID to test device
+        working-directory: firmware
         run: |
-          echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> firmware/firmware.conf
-          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ env.DEVICE_ID }}\"" >> firmware/firmware.conf
+          echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> firmware.conf
+          echo "CONFIG_CLOUD_CLIENT_ID=\"${{ env.DEVICE_ID }}\"" >> firmware.conf
 
       - run: cat firmware/firmware.conf
 
-      - name: Pull Docker image
-        run: docker pull nordicplayground/nrfconnect-sdk:main
-
       - name: Build
+        working-directory: firmware
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west init -l && west update --narrow -o=--depth=1 && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"'
-          cp firmware/build/zephyr/merged.hex firmware.hex
-          cp firmware/build/zephyr/app_update.bin firmware.bin
-          cp firmware/firmware.conf firmware.conf
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
+          cp build/zephyr/merged.hex ../firmware.hex
+          cp build/zephyr/app_update.bin ../firmware.bin
+          cp firmware.conf ../firmware.conf
 
       - name: Build with changed version for FOTA test
+        working-directory: firmware
         env:
           APP_VERSION:
             ${{ github.sha }}-${{ matrix.board }}-${{ env.DEVICE_ID }}
         run: |
-          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> firmware/firmware.conf
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main /bin/bash -c 'cd firmware && west build -p always -b ${{ matrix.board }} -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"'
-          cp firmware/build/zephyr/app_update.bin fota-upgrade.bin
-          cp firmware/build/zephyr/merged.hex fota-upgrade.hex
-          cp firmware/firmware.conf fota-upgrade.conf
+          echo "CONFIG_ASSET_TRACKER_V2_APP_VERSION=\"${{ env.APP_VERSION }}-upgraded\"" >> firmware.conf
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
+          cp build/zephyr/app_update.bin ../fota-upgrade.bin
+          cp build/zephyr/merged.hex ../fota-upgrade.hex
+          cp firmware.conf ../fota-upgrade.conf
 
       - uses: actions/upload-artifact@v3
         with:
