@@ -399,6 +399,7 @@ jobs:
           ci runner package: "@nordicsemiconductor/firmware-ci-runner-azure@>=3.1.1"
 
       - uses: actions/upload-artifact@v3
+        if: always()
         with:
           if-no-files-found: error
           name: e2e-run-${{ matrix.board }}-${{ needs.build-id.outputs.id }}
