@@ -10,8 +10,6 @@ on:
       - ".github/workflows/build-and-release.yaml"
       - "west.yml"
       - "*.conf"
-      - "!package.json"
-      - "!package-lock.json"
   repository_dispatch:
     types:
       - source-update
