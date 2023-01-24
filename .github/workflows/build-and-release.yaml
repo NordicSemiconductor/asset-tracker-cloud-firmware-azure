@@ -275,6 +275,11 @@ jobs:
           echo "CONFIG_CLOUD_CLIENT_ID_USE_CUSTOM=y" >> firmware.conf
           echo "CONFIG_CLOUD_CLIENT_ID=\"${{ env.DEVICE_ID }}\"" >> firmware.conf
 
+      - name: Enable immediate logging
+        working-directory: firmware
+        run: |
+          echo "CONFIG_LOG_MODE_IMMEDIATE=y" >> firmware.conf
+
       - run: cat firmware/firmware.conf
 
       - name: Build
