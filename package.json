@@ -44,6 +44,10 @@
       [
         "@semantic-release/github",
         {
+          "successComment": false,
+          "failTitle": false
+        },
+        {
           "assets": [
             {
               "path": "/home/runner/work/asset-tracker-cloud-firmware-azure/asset-tracker-cloud-firmware-azure/thingy91_nrf9160_ns-nodebug-*/merged.hex",
