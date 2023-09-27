@@ -58,7 +58,7 @@ jobs:
       nextRelease: ${{ steps.version.outputs.nextRelease }}
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: Determine next release version
         uses: nordicsemiconductor/cloud-get-next-version-action@saga
@@ -83,7 +83,7 @@ jobs:
         loglevel: [debug, nodebug]
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
         with:
           path: firmware
 
@@ -176,7 +176,7 @@ jobs:
         with:
           node-version: "18.x"
 
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: Clone nRF Asset Tracker for Azure
         run: git clone `cat package.json | jq -r '.cloud.repository'` cloud
@@ -241,7 +241,7 @@ jobs:
         network: [ltem]
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
         with:
           path: firmware
 
@@ -346,7 +346,7 @@ jobs:
         network: [ltem]
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - uses: actions/download-artifact@v3
         with:
@@ -436,7 +436,7 @@ jobs:
         network: [ltem]
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - uses: actions/download-artifact@v3
         with:
@@ -502,7 +502,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - uses: actions/download-artifact@v3
 
