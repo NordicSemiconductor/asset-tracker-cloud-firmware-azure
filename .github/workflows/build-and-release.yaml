@@ -58,7 +58,7 @@ jobs:
       nextRelease: ${{ steps.version.outputs.nextRelease }}
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
       - name: Determine next release version
         uses: nordicsemiconductor/cloud-get-next-version-action@saga
@@ -83,7 +83,7 @@ jobs:
         loglevel: [debug, nodebug]
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
         with:
           path: firmware
 
@@ -147,7 +147,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v3
 
