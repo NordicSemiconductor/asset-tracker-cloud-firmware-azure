@@ -105,13 +105,13 @@ jobs:
         working-directory: firmware
         if: matrix.loglevel == 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -s /workdir/project -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;overlay-debug.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
 
       - name: Build with debug disabled
         working-directory: firmware
         if: matrix.loglevel != 'debug'
         run: |
-          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
+          docker run --rm -v ${PWD}:/workdir/project nordicplayground/nrfconnect-sdk:main west build -p always -b ${{ matrix.board }} --build-dir /workdir/project/build -s /workdir/project -- -DOVERLAY_CONFIG="overlay-azure.conf;overlay-pgps.conf;asset-tracker-cloud-firmware-azure.conf;firmware.conf" -DEXTRA_CFLAGS="-Werror"
 
       - name: Copy firmware
         working-directory: firmware
