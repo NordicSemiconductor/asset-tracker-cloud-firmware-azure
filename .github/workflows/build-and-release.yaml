@@ -121,7 +121,7 @@ jobs:
           cp build/zephyr/app_update.bin ../
           cp firmware.conf ../
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           if-no-files-found: error
           name:
