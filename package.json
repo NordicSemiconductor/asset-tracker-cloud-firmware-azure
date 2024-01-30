@@ -23,7 +23,8 @@
   "license": "Nordic-5-Clause",
   "devDependencies": {
     "@commitlint/config-conventional": "18.6.0",
-    "@nordicsemiconductor/asset-tracker-cloud-code-style": "13.1.12"
+    "@nordicsemiconductor/asset-tracker-cloud-code-style": "13.1.12",
+    "husky": "9.0.7"
   },
   "lint-staged": {
     "*.{yml,md,js,json}": [
@@ -114,7 +115,7 @@
     ]
   },
   "scripts": {
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "cloud": {
     "repository": "https://github.com/NordicSemiconductor/asset-tracker-cloud-azure-js.git"
