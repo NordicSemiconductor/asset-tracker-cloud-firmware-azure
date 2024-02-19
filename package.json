@@ -2,6 +2,7 @@
   "name": "@nordicsemiconductor/asset-tracker-cloud-firmware-azure",
   "version": "0.0.0-development",
   "description": "nRF Asset Tracker for Azure firmware.",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/NordicSemiconductor/asset-tracker-cloud-firmware-azure.git"
@@ -28,7 +29,7 @@
   },
   "lint-staged": {
     "*.{yml,md,js,json}": [
-      "prettier --write --config .prettierrc.js"
+      "prettier --write"
     ]
   },
   "engines": {
@@ -119,5 +120,6 @@
   },
   "cloud": {
     "repository": "https://github.com/NordicSemiconductor/asset-tracker-cloud-azure-js.git"
-  }
+  },
+  "prettier": "@bifravst/prettier-config"
 }
