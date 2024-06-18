@@ -16,4 +16,4 @@ The copy is regularly updated from source and kept in sync with the NCS release
 branches.
 
 > :information_source:
-> [Read the complete nRF Asset Tracker documentation](https://nordicsemiconductor.github.io/asset-tracker-cloud-docs/).
+> [Read the complete nRF Asset Tracker documentation](https://docs.nordicsemi.com/bundle/nrf-asset-tracker-saga/).
