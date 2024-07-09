@@ -1,3 +1,7 @@
+> [!NOTE]  
+>
+> This repository has been archived, because [it is considered feature-complete](https://github.com/NordicSemiconductor/asset-tracker-cloud-docs/discussions/1068). ✔️ 
+
 # nRF Asset Tracker for Azure firmware
 
 ![Build and Release](https://github.com/NordicSemiconductor/asset-tracker-cloud-firmware-azure/workflows/Build%20and%20Release/badge.svg)
